@@ -35,7 +35,7 @@ import {
 } from '../data/stormAdvisoryNeighborhoods'
 import NeighborhoodStatsCard from './NeighborhoodStatsCard'
 
-const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY ?? ''
+const MAPTILER_API_KEY = 'X1kjwlVN29N1UZItdixx'
 
 const MAP_STYLE_URL = `https://api.maptiler.com/maps/streets-v2-dark/style.json?key=${MAPTILER_API_KEY}`
 
