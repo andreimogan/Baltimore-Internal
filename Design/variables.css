@@ -1,0 +1,347 @@
+/* ========================================
+   Design System - CSS Variables
+   Light & Dark Mode Color Definitions
+   ======================================== */
+
+/* ========================================
+   ROOT - Light Mode (Default)
+   ======================================== */
+:root {
+  /* Brand Colors */
+  --lp-brand-primary: #2D1B4E;
+  --lp-brand-primary-dark: #1A0F2E;
+  --lp-brand-accent: #F4C430;
+  --lp-brand-supporting: #5DADE2;
+
+  /* Background Colors - Light Mode */
+  --lp-bg: #FFFFFF;
+  --lp-bg-page: #F5F5F5;
+  --lp-surface-default: #FFFFFF;
+  --lp-surface-subtle: #F9F9F9;
+  --lp-surface-alt: #E8F4F8;
+  --lp-surface-elevated: #FFFFFF;
+  --lp-surface-soft-bg: #F0F0F0;
+  --lp-surface-hero-bg: #FFFFFF;
+
+  /* Text Colors - Light Mode */
+  --lp-text-primary: #1A1A1A;
+  --lp-text-secondary: #4A5568;
+  --lp-text-inverse: #FFFFFF;
+  --lp-eyebrow-text: #2D1B4E;
+
+  /* Border Colors - Light Mode */
+  --lp-border-default: #D1D5DB;
+  --lp-border-soft: #E5E7EB;
+  --lp-border-strong: #9CA3AF;
+
+  /* Status Colors - Light Mode */
+  --lp-status-info-bg: #D0E8F2;
+  --lp-status-info-border: #A0D8E8;
+  --lp-status-info-text: #0c5460;
+
+  --lp-status-success-bg: #D4EDDA;
+  --lp-status-success-border: #C3E6CB;
+  --lp-status-success-text: #155724;
+
+  --lp-status-warning-bg: #FFF3CD;
+  --lp-status-warning-border: #FFEEBA;
+  --lp-status-warning-text: #856404;
+
+  --lp-status-error-bg: #F8D7DA;
+  --lp-status-error-border: #F5C6CB;
+  --lp-status-error-text: #721c24;
+
+  /* Chart Colors */
+  --lp-chart-fill-primary: #2D1B4E;
+  --lp-chart-fill-secondary: #F4C430;
+  --lp-chart-fill-tertiary: #5DADE2;
+  --lp-chart-track: #E8E8E8;
+
+  /* Header Colors - Light Mode */
+  --lp-header-bg: #1A0F2E;
+  --lp-header-foreground: #FFFFFF;
+
+  /* Elevation/Shadows */
+  --lp-shadow-none: 0;
+  --lp-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --lp-shadow-md: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --lp-shadow-lg: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --lp-shadow-xl: 0 10px 15px rgba(0, 0, 0, 0.1);
+
+  /* Transitions */
+  --lp-transition-base: all 0.3s ease;
+  --lp-transition-colors: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* ========================================
+   DARK MODE - System Preference
+   ======================================== */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Brand Colors (unchanged in dark mode) */
+    --lp-brand-primary: #2D1B4E;
+    --lp-brand-primary-dark: #1A0F2E;
+    --lp-brand-accent: #F4C430;
+    --lp-brand-supporting: #5DADE2;
+
+    /* Background Colors - Dark Mode */
+    --lp-bg: #0F1419;
+    --lp-bg-page: #151D2B;
+    --lp-surface-default: #1B2635;
+    --lp-surface-subtle: #252E3D;
+    --lp-surface-alt: #1E2A39;
+    --lp-surface-elevated: #212D3B;
+    --lp-surface-soft-bg: #2A3545;
+    --lp-surface-hero-bg: #1B2635;
+
+    /* Text Colors - Dark Mode */
+    --lp-text-primary: #FFFFFF;
+    --lp-text-secondary: #A8A8A8;
+    --lp-text-inverse: #0F1419;
+    --lp-eyebrow-text: #E0B45A;
+
+    /* Border Colors - Dark Mode */
+    --lp-border-default: #3A4A5A;
+    --lp-border-soft: #2E3D4D;
+    --lp-border-strong: #4A5A6A;
+
+    /* Status Colors - Dark Mode */
+    --lp-status-info-bg: #1A3A4D;
+    --lp-status-info-border: #2A5A7D;
+    --lp-status-info-text: #A8D8F0;
+
+    --lp-status-success-bg: #1A3A2A;
+    --lp-status-success-border: #2A6A4A;
+    --lp-status-success-text: #A8F0C8;
+
+    --lp-status-warning-bg: #4A3A1A;
+    --lp-status-warning-border: #7A6A3A;
+    --lp-status-warning-text: #F0D8A8;
+
+    --lp-status-error-bg: #4A1A2A;
+    --lp-status-error-border: #7A3A4A;
+    --lp-status-error-text: #F0A8C8;
+
+    /* Chart Colors (slightly adjusted for dark mode) */
+    --lp-chart-fill-primary: #6B4BA8;
+    --lp-chart-fill-secondary: #F4C430;
+    --lp-chart-fill-tertiary: #7DBCE8;
+    --lp-chart-track: #2A3A4A;
+
+    /* Header Colors - Dark Mode */
+    --lp-header-bg: #0F1419;
+    --lp-header-foreground: #FFFFFF;
+
+    /* Shadows are more subtle in dark mode */
+    --lp-shadow-none: 0;
+    --lp-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --lp-shadow-md: 0 1px 3px rgba(0, 0, 0, 0.5);
+    --lp-shadow-lg: 0 4px 6px rgba(0, 0, 0, 0.5);
+    --lp-shadow-xl: 0 10px 15px rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* ========================================
+   MANUAL DARK MODE - data-theme attribute
+   (for user-controlled toggle)
+   ======================================== */
+[data-theme="dark"] {
+  /* Background Colors - Dark Mode */
+  --lp-bg: #0F1419;
+  --lp-bg-page: #151D2B;
+  --lp-surface-default: #1B2635;
+  --lp-surface-subtle: #252E3D;
+  --lp-surface-alt: #1E2A39;
+  --lp-surface-elevated: #212D3B;
+  --lp-surface-soft-bg: #2A3545;
+  --lp-surface-hero-bg: #1B2635;
+
+  /* Text Colors - Dark Mode */
+  --lp-text-primary: #FFFFFF;
+  --lp-text-secondary: #A8A8A8;
+  --lp-text-inverse: #0F1419;
+  --lp-eyebrow-text: #E0B45A;
+
+  /* Border Colors - Dark Mode */
+  --lp-border-default: #3A4A5A;
+  --lp-border-soft: #2E3D4D;
+  --lp-border-strong: #4A5A6A;
+
+  /* Status Colors - Dark Mode */
+  --lp-status-info-bg: #1A3A4D;
+  --lp-status-info-border: #2A5A7D;
+  --lp-status-info-text: #A8D8F0;
+
+  --lp-status-success-bg: #1A3A2A;
+  --lp-status-success-border: #2A6A4A;
+  --lp-status-success-text: #A8F0C8;
+
+  --lp-status-warning-bg: #4A3A1A;
+  --lp-status-warning-border: #7A6A3A;
+  --lp-status-warning-text: #F0D8A8;
+
+  --lp-status-error-bg: #4A1A2A;
+  --lp-status-error-border: #7A3A4A;
+  --lp-status-error-text: #F0A8C8;
+
+  /* Chart Colors */
+  --lp-chart-fill-primary: #6B4BA8;
+  --lp-chart-fill-secondary: #F4C430;
+  --lp-chart-fill-tertiary: #7DBCE8;
+  --lp-chart-track: #2A3A4A;
+
+  /* Header Colors */
+  --lp-header-bg: #0F1419;
+  --lp-header-foreground: #FFFFFF;
+
+  /* Shadows */
+  --lp-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --lp-shadow-md: 0 1px 3px rgba(0, 0, 0, 0.5);
+  --lp-shadow-lg: 0 4px 6px rgba(0, 0, 0, 0.5);
+  --lp-shadow-xl: 0 10px 15px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="light"] {
+  /* All light mode values from :root */
+  --lp-bg: #FFFFFF;
+  --lp-bg-page: #F5F5F5;
+  --lp-surface-default: #FFFFFF;
+  --lp-surface-subtle: #F9F9F9;
+  --lp-surface-alt: #E8F4F8;
+  --lp-surface-elevated: #FFFFFF;
+  --lp-surface-soft-bg: #F0F0F0;
+
+  --lp-text-primary: #1A1A1A;
+  --lp-text-secondary: #4A5568;
+  --lp-text-inverse: #FFFFFF;
+  --lp-eyebrow-text: #2D1B4E;
+
+  --lp-border-default: #D1D5DB;
+  --lp-border-soft: #E5E7EB;
+  --lp-border-strong: #9CA3AF;
+
+  --lp-status-info-bg: #D0E8F2;
+  --lp-status-info-border: #A0D8E8;
+  --lp-status-success-bg: #D4EDDA;
+  --lp-status-success-border: #C3E6CB;
+  --lp-status-warning-bg: #FFF3CD;
+  --lp-status-warning-border: #FFEEBA;
+  --lp-status-error-bg: #F8D7DA;
+  --lp-status-error-border: #F5C6CB;
+
+  --lp-chart-fill-primary: #2D1B4E;
+  --lp-chart-fill-secondary: #F4C430;
+  --lp-chart-fill-tertiary: #5DADE2;
+  --lp-chart-track: #E8E8E8;
+
+  --lp-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --lp-shadow-md: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --lp-shadow-lg: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --lp-shadow-xl: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* ========================================
+   GLOBAL STYLES
+   ======================================== */
+
+/* Apply smooth transitions to all elements */
+* {
+  transition: var(--lp-transition-colors);
+}
+
+/* Base body styling */
+body {
+  background-color: var(--lp-bg-page);
+  color: var(--lp-text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.5;
+}
+
+/* ========================================
+   UTILITY CLASSES
+   ======================================== */
+
+/* Background utilities */
+.bg-primary {
+  background-color: var(--lp-brand-primary);
+}
+
+.bg-surface {
+  background-color: var(--lp-surface-default);
+}
+
+.bg-surface-subtle {
+  background-color: var(--lp-surface-subtle);
+}
+
+.bg-page {
+  background-color: var(--lp-bg-page);
+}
+
+/* Text utilities */
+.text-primary {
+  color: var(--lp-text-primary);
+}
+
+.text-secondary {
+  color: var(--lp-text-secondary);
+}
+
+.text-inverse {
+  color: var(--lp-text-inverse);
+}
+
+/* Border utilities */
+.border-default {
+  border-color: var(--lp-border-default);
+}
+
+.border-soft {
+  border-color: var(--lp-border-soft);
+}
+
+.border-strong {
+  border-color: var(--lp-border-strong);
+}
+
+/* Status utilities */
+.bg-status-info {
+  background-color: var(--lp-status-info-bg);
+  color: var(--lp-status-info-text);
+  border: 1px solid var(--lp-status-info-border);
+}
+
+.bg-status-success {
+  background-color: var(--lp-status-success-bg);
+  color: var(--lp-status-success-text);
+  border: 1px solid var(--lp-status-success-border);
+}
+
+.bg-status-warning {
+  background-color: var(--lp-status-warning-bg);
+  color: var(--lp-status-warning-text);
+  border: 1px solid var(--lp-status-warning-border);
+}
+
+.bg-status-error {
+  background-color: var(--lp-status-error-bg);
+  color: var(--lp-status-error-text);
+  border: 1px solid var(--lp-status-error-border);
+}
+
+/* Shadow utilities */
+.shadow-sm {
+  box-shadow: var(--lp-shadow-sm);
+}
+
+.shadow-md {
+  box-shadow: var(--lp-shadow-md);
+}
+
+.shadow-lg {
+  box-shadow: var(--lp-shadow-lg);
+}
+
+.shadow-xl {
+  box-shadow: var(--lp-shadow-xl);
+}

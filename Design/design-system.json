@@ -1,0 +1,336 @@
+{
+  "designSystem": {
+    "name": "Baltimore 311 Explorer Design System",
+    "version": "1.0.0",
+    "description": "Complete design system with colors, typography, components, and spacing guidelines"
+  },
+  "colors": {
+    "brand": {
+      "--lp-brand-primary": "#2D1B4E",
+      "--lp-brand-primary-dark": "#1A0F2E",
+      "--lp-brand-accent": "#F4C430",
+      "--lp-brand-supporting": "#5DADE2"
+    },
+    "lightMode": {
+      "background": {
+        "--lp-bg": "#FFFFFF",
+        "--lp-bg-page": "#F5F5F5",
+        "--lp-surface-default": "#FFFFFF",
+        "--lp-surface-subtle": "#F9F9F9",
+        "--lp-surface-alt": "#E8F4F8",
+        "--lp-surface-elevated": "#FFFFFF",
+        "--lp-surface-soft-bg": "#F0F0F0",
+        "--lp-surface-hero-bg": "#FFFFFF"
+      },
+      "text": {
+        "--lp-text-primary": "#1A1A1A",
+        "--lp-text-secondary": "#4A5568",
+        "--lp-text-inverse": "#FFFFFF",
+        "--lp-eyebrow-text": "#2D1B4E"
+      },
+      "border": {
+        "--lp-border-default": "#D1D5DB",
+        "--lp-border-soft": "#E5E7EB",
+        "--lp-border-strong": "#9CA3AF"
+      },
+      "status": {
+        "info": {
+          "bg": "#D0E8F2",
+          "border": "#A0D8E8"
+        },
+        "success": {
+          "bg": "#D4EDDA",
+          "border": "#C3E6CB"
+        },
+        "warning": {
+          "bg": "#FFF3CD",
+          "border": "#FFEEBA"
+        },
+        "error": {
+          "bg": "#F8D7DA",
+          "border": "#F5C6CB"
+        }
+      },
+      "header": {
+        "--lp-header-bg": "#1A0F2E",
+        "--lp-header-foreground": "#FFFFFF"
+      }
+    },
+    "darkMode": {
+      "background": {
+        "--lp-bg": "#0F1419",
+        "--lp-bg-page": "#151D2B",
+        "--lp-surface-default": "#1B2635",
+        "--lp-surface-subtle": "#252E3D",
+        "--lp-surface-alt": "#1E2A39",
+        "--lp-surface-elevated": "#212D3B",
+        "--lp-surface-soft-bg": "#2A3545",
+        "--lp-surface-hero-bg": "#1B2635"
+      },
+      "text": {
+        "--lp-text-primary": "#FFFFFF",
+        "--lp-text-secondary": "#A8A8A8",
+        "--lp-text-inverse": "#0F1419",
+        "--lp-eyebrow-text": "#E0B45A"
+      },
+      "border": {
+        "--lp-border-default": "#3A4A5A",
+        "--lp-border-soft": "#2E3D4D",
+        "--lp-border-strong": "#4A5A6A"
+      },
+      "status": {
+        "info": {
+          "bg": "#1A3A4D",
+          "border": "#2A5A7D"
+        },
+        "success": {
+          "bg": "#1A3A2A",
+          "border": "#2A6A4A"
+        },
+        "warning": {
+          "bg": "#4A3A1A",
+          "border": "#7A6A3A"
+        },
+        "error": {
+          "bg": "#4A1A2A",
+          "border": "#7A3A4A"
+        }
+      },
+      "header": {
+        "--lp-header-bg": "#0F1419",
+        "--lp-header-foreground": "#FFFFFF"
+      }
+    },
+    "background": {
+      "--lp-bg": "#FFFFFF",
+      "--lp-bg-page": "#F5F5F5",
+      "--lp-surface-default": "#FFFFFF",
+      "--lp-surface-subtle": "#F9F9F9",
+      "--lp-surface-alt": "#E8F4F8",
+      "--lp-surface-elevated": "#FFFFFF",
+      "--lp-surface-soft-bg": "#F0F0F0",
+      "--lp-surface-hero-bg": "#FFFFFF"
+    },
+    "text": {
+      "--lp-text-primary": "#1A1A1A",
+      "--lp-text-secondary": "#4A5568",
+      "--lp-text-inverse": "#FFFFFF",
+      "--lp-eyebrow-text": "#2D1B4E"
+    },
+    "border": {
+      "--lp-border-default": "#D1D5DB",
+      "--lp-border-soft": "#E5E7EB",
+      "--lp-border-strong": "#9CA3AF"
+    },
+    "status": {
+      "info": {
+        "background": "--lp-status-info-bg",
+        "border": "--lp-status-info-border",
+        "hexBackground": "#D0E8F2",
+        "hexBorder": "#A0D8E8"
+      },
+      "success": {
+        "background": "--lp-status-success-bg",
+        "border": "--lp-status-success-border",
+        "hexBackground": "#D4EDDA",
+        "hexBorder": "#C3E6CB"
+      },
+      "warning": {
+        "background": "--lp-status-warning-bg",
+        "border": "--lp-status-warning-border",
+        "hexBackground": "#FFF3CD",
+        "hexBorder": "#FFEEBA"
+      },
+      "error": {
+        "background": "--lp-status-error-bg",
+        "border": "--lp-status-error-border",
+        "hexBackground": "#F8D7DA",
+        "hexBorder": "#F5C6CB"
+      }
+    },
+    "chart": {
+      "--lp-chart-fill-primary": "#2D1B4E",
+      "--lp-chart-fill-secondary": "#F4C430",
+      "--lp-chart-fill-tertiary": "#5DADE2",
+      "--lp-chart-track": "#E8E8E8"
+    },
+    "header": {
+      "--lp-header-bg": "#1A0F2E",
+      "--lp-header-foreground": "#FFFFFF"
+    }
+  },
+  "typography": {
+    "fontFamily": {
+      "primary": "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+      "mono": "'Monaco', 'Courier New', monospace"
+    },
+    "heading": {
+      "h1": {
+        "fontSize": "2rem",
+        "fontWeight": "bold",
+        "lineHeight": "1.2",
+        "color": "var(--lp-text-primary)"
+      },
+      "h2": {
+        "fontSize": "1.5rem",
+        "fontWeight": "bold",
+        "lineHeight": "1.3",
+        "color": "var(--lp-text-primary)"
+      },
+      "h3": {
+        "fontSize": "1.25rem",
+        "fontWeight": "600",
+        "lineHeight": "1.4",
+        "color": "var(--lp-text-primary)"
+      }
+    },
+    "body": {
+      "regular": {
+        "fontSize": "1rem",
+        "fontWeight": "400",
+        "lineHeight": "1.5",
+        "color": "var(--lp-text-primary)"
+      },
+      "small": {
+        "fontSize": "0.875rem",
+        "fontWeight": "400",
+        "lineHeight": "1.4",
+        "color": "var(--lp-text-secondary)"
+      }
+    }
+  },
+  "spacing": {
+    "xs": "0.25rem",
+    "sm": "0.5rem",
+    "md": "1rem",
+    "lg": "1.5rem",
+    "xl": "2rem",
+    "2xl": "3rem",
+    "3xl": "4rem"
+  },
+  "components": {
+    "button": {
+      "primary": {
+        "background": "var(--lp-brand-primary)",
+        "color": "var(--lp-text-inverse)",
+        "padding": "0.75rem 1.5rem",
+        "borderRadius": "0.375rem",
+        "fontWeight": "500",
+        "border": "none",
+        "cursor": "pointer",
+        "transition": "background-color 0.2s ease"
+      },
+      "secondary": {
+        "background": "var(--lp-surface-soft-bg)",
+        "color": "var(--lp-text-primary)",
+        "padding": "0.75rem 1.5rem",
+        "borderRadius": "0.375rem",
+        "fontWeight": "500",
+        "border": "1px solid var(--lp-border-default)",
+        "cursor": "pointer"
+      },
+      "accent": {
+        "background": "var(--lp-brand-accent)",
+        "color": "var(--lp-text-primary)",
+        "padding": "0.75rem 1.5rem",
+        "borderRadius": "0.375rem",
+        "fontWeight": "500",
+        "border": "none",
+        "cursor": "pointer"
+      }
+    },
+    "card": {
+      "background": "var(--lp-surface-default)",
+      "border": "1px solid var(--lp-border-soft)",
+      "borderRadius": "0.5rem",
+      "padding": "1.5rem",
+      "boxShadow": "0 1px 3px rgba(0, 0, 0, 0.1)"
+    },
+    "header": {
+      "background": "var(--lp-header-bg)",
+      "color": "var(--lp-header-foreground)",
+      "padding": "1rem 1.5rem",
+      "display": "flex",
+      "alignItems": "center",
+      "justifyContent": "space-between"
+    },
+    "badge": {
+      "info": {
+        "background": "var(--lp-status-info-bg)",
+        "color": "#0c5460",
+        "padding": "0.25rem 0.75rem",
+        "borderRadius": "0.25rem",
+        "fontSize": "0.875rem",
+        "fontWeight": "500"
+      },
+      "success": {
+        "background": "var(--lp-status-success-bg)",
+        "color": "#155724",
+        "padding": "0.25rem 0.75rem",
+        "borderRadius": "0.25rem",
+        "fontSize": "0.875rem",
+        "fontWeight": "500"
+      },
+      "warning": {
+        "background": "var(--lp-status-warning-bg)",
+        "color": "#856404",
+        "padding": "0.25rem 0.75rem",
+        "borderRadius": "0.25rem",
+        "fontSize": "0.875rem",
+        "fontWeight": "500"
+      },
+      "error": {
+        "background": "var(--lp-status-error-bg)",
+        "color": "#721c24",
+        "padding": "0.25rem 0.75rem",
+        "borderRadius": "0.25rem",
+        "fontSize": "0.875rem",
+        "fontWeight": "500"
+      }
+    },
+    "input": {
+      "background": "var(--lp-surface-default)",
+      "border": "1px solid var(--lp-border-default)",
+      "borderRadius": "0.375rem",
+      "padding": "0.75rem 1rem",
+      "fontSize": "1rem",
+      "fontFamily": "var(--fontFamily-primary)",
+      "color": "var(--lp-text-primary)",
+      "transition": "border-color 0.2s ease"
+    },
+    "table": {
+      "background": "var(--lp-surface-default)",
+      "headerBackground": "var(--lp-surface-subtle)",
+      "headerColor": "var(--lp-text-primary)",
+      "borderColor": "var(--lp-border-soft)",
+      "rowHoverBackground": "#F9F9F9"
+    }
+  },
+  "elevation": {
+    "none": "0",
+    "sm": "0 1px 2px rgba(0, 0, 0, 0.05)",
+    "md": "0 1px 3px rgba(0, 0, 0, 0.1)",
+    "lg": "0 4px 6px rgba(0, 0, 0, 0.1)",
+    "xl": "0 10px 15px rgba(0, 0, 0, 0.1)"
+  },
+  "borderRadius": {
+    "none": "0",
+    "sm": "0.125rem",
+    "md": "0.375rem",
+    "lg": "0.5rem",
+    "full": "9999px"
+  },
+  "usageGuide": {
+    "header": "Use var(--lp-header-bg) with var(--lp-header-foreground) for navigation and top bars",
+    "dataViz": "Use chart colors in order: primary (purple), secondary (gold), tertiary (teal) for multi-series data",
+    "statusIndicators": "Combine background and border colors for status badges and alerts",
+    "textHierarchy": "Primary text for main content, secondary for supporting text, inverse for dark backgrounds",
+    "spacing": "Use spacing scale (xs-3xl) consistently throughout for visual rhythm",
+    "darkMode": "Adjust surface colors and text colors appropriately when implementing dark theme"
+  },
+  "cssVariables": {
+    "usage": "Apply these as CSS custom properties in your stylesheet",
+    "example": ":root { --lp-brand-primary: #2D1B4E; --lp-brand-accent: #F4C430; ... }",
+    "implementation": "Reference in components using var(--lp-brand-primary)"
+  }
+}
