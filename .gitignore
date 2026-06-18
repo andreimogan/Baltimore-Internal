@@ -5,3 +5,11 @@ dist/
 .env.*
 !.env.example
 *.local
+
+# Large raw source GeoJSON — too big for GitHub's 100MB limit.
+# Not needed to run the app (it reads the committed public/data chunks);
+# only needed to regenerate chunks via scripts/build-parcel-chunks.py.
+Database/Property_Information.geojson
+Database/Buildings_Footprint.geojson
+Database/baltimore-neighborhoods.geojson
+Database/311_blight_2024.geojson

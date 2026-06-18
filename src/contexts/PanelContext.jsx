@@ -96,6 +96,62 @@ export const PanelProvider = ({ children }) => {
   const [districtInsightsEnabled, setDistrictInsightsEnabled] = useState(
     initialMapLayers.districtInsightsEnabled
   )
+  const [baltimoreWardPrecinctsData, setBaltimoreWardPrecinctsData] = useState(null)
+  /** When true, ward-precinct subdivision layer renders (subject to per-precinct hide toggles). */
+  const [baltimoreWardPrecinctsAll, setBaltimoreWardPrecinctsAll] = useState(
+    initialMapLayers.baltimoreWardPrecinctsAll
+  )
+  /** Ward-precinct `VDTST12` → true when hidden from map. */
+  const [baltimoreWardPrecinctHidden, setBaltimoreWardPrecinctHidden] = useState(
+    initialMapLayers.baltimoreWardPrecinctHidden
+  )
+  /** Master toggle for the on-demand parcel layer. */
+  const [baltimoreParcelsEnabled, setBaltimoreParcelsEnabled] = useState(
+    initialMapLayers.baltimoreParcelsEnabled
+  )
+  /** Opt-in (key → true) records of which boundaries' parcels to load. Default empty = none loaded. */
+  const [baltimoreParcelNeighborhoodEnabled, setBaltimoreParcelNeighborhoodEnabled] = useState(
+    initialMapLayers.baltimoreParcelNeighborhoodEnabled
+  )
+  const [baltimoreParcelDistrictEnabled, setBaltimoreParcelDistrictEnabled] = useState(
+    initialMapLayers.baltimoreParcelDistrictEnabled
+  )
+  const [baltimoreParcelPrecinctEnabled, setBaltimoreParcelPrecinctEnabled] = useState(
+    initialMapLayers.baltimoreParcelPrecinctEnabled
+  )
+  /** Master toggle for the on-demand buildings-footprint layer. */
+  const [baltimoreBuildingsEnabled, setBaltimoreBuildingsEnabled] = useState(
+    initialMapLayers.baltimoreBuildingsEnabled
+  )
+  /** Opt-in (key → true) records of which boundaries' buildings to load. Default empty = none loaded. */
+  const [baltimoreBuildingNeighborhoodEnabled, setBaltimoreBuildingNeighborhoodEnabled] = useState(
+    initialMapLayers.baltimoreBuildingNeighborhoodEnabled
+  )
+  const [baltimoreBuildingDistrictEnabled, setBaltimoreBuildingDistrictEnabled] = useState(
+    initialMapLayers.baltimoreBuildingDistrictEnabled
+  )
+  const [baltimoreBuildingPrecinctEnabled, setBaltimoreBuildingPrecinctEnabled] = useState(
+    initialMapLayers.baltimoreBuildingPrecinctEnabled
+  )
+  /** Vacant Building Notice point layer — full dataset loaded once, filtered in memory. */
+  const [baltimoreVbnData, setBaltimoreVbnData] = useState(null)
+  const [baltimoreVbnEnabled, setBaltimoreVbnEnabled] = useState(
+    initialMapLayers.baltimoreVbnEnabled
+  )
+  const [baltimoreVbnNeighborhoodEnabled, setBaltimoreVbnNeighborhoodEnabled] = useState(
+    initialMapLayers.baltimoreVbnNeighborhoodEnabled
+  )
+  const [baltimoreVbnDistrictEnabled, setBaltimoreVbnDistrictEnabled] = useState(
+    initialMapLayers.baltimoreVbnDistrictEnabled
+  )
+  const [baltimoreVbnPrecinctEnabled, setBaltimoreVbnPrecinctEnabled] = useState(
+    initialMapLayers.baltimoreVbnPrecinctEnabled
+  )
+  /** Use Cases → Public Safety: vacant-building risk layer (footprints colored by risk). */
+  const [baltimoreVacantRiskData, setBaltimoreVacantRiskData] = useState(null)
+  const [baltimorePublicSafetyEnabled, setBaltimorePublicSafetyEnabled] = useState(
+    initialMapLayers.baltimorePublicSafetyEnabled
+  )
   /** When true, neighborhood choropleth uses hardcoded storm-advisory risk instead of 311 density. */
   const [stormAdvisoryNeighborhoodsVisible, setStormAdvisoryNeighborhoodsVisible] = useState(
     initialMapLayers.stormAdvisoryNeighborhoodsVisible
@@ -194,6 +250,21 @@ export const PanelProvider = ({ children }) => {
       baltimoreDistrictsAll,
       baltimoreDistrictHidden,
       districtInsightsEnabled,
+      baltimoreWardPrecinctsAll,
+      baltimoreWardPrecinctHidden,
+      baltimoreParcelsEnabled,
+      baltimoreParcelNeighborhoodEnabled,
+      baltimoreParcelDistrictEnabled,
+      baltimoreParcelPrecinctEnabled,
+      baltimoreBuildingsEnabled,
+      baltimoreBuildingNeighborhoodEnabled,
+      baltimoreBuildingDistrictEnabled,
+      baltimoreBuildingPrecinctEnabled,
+      baltimoreVbnEnabled,
+      baltimoreVbnNeighborhoodEnabled,
+      baltimoreVbnDistrictEnabled,
+      baltimoreVbnPrecinctEnabled,
+      baltimorePublicSafetyEnabled,
       stormAdvisoryNeighborhoodsVisible,
     })
     const saved = saveMapLayerDefaults(snapshot)
@@ -322,6 +393,42 @@ export const PanelProvider = ({ children }) => {
     setBaltimoreDistrictHidden,
     districtInsightsEnabled,
     setDistrictInsightsEnabled,
+    baltimoreWardPrecinctsData,
+    setBaltimoreWardPrecinctsData,
+    baltimoreWardPrecinctsAll,
+    setBaltimoreWardPrecinctsAll,
+    baltimoreWardPrecinctHidden,
+    setBaltimoreWardPrecinctHidden,
+    baltimoreParcelsEnabled,
+    setBaltimoreParcelsEnabled,
+    baltimoreParcelNeighborhoodEnabled,
+    setBaltimoreParcelNeighborhoodEnabled,
+    baltimoreParcelDistrictEnabled,
+    setBaltimoreParcelDistrictEnabled,
+    baltimoreParcelPrecinctEnabled,
+    setBaltimoreParcelPrecinctEnabled,
+    baltimoreBuildingsEnabled,
+    setBaltimoreBuildingsEnabled,
+    baltimoreBuildingNeighborhoodEnabled,
+    setBaltimoreBuildingNeighborhoodEnabled,
+    baltimoreBuildingDistrictEnabled,
+    setBaltimoreBuildingDistrictEnabled,
+    baltimoreBuildingPrecinctEnabled,
+    setBaltimoreBuildingPrecinctEnabled,
+    baltimoreVbnData,
+    setBaltimoreVbnData,
+    baltimoreVbnEnabled,
+    setBaltimoreVbnEnabled,
+    baltimoreVbnNeighborhoodEnabled,
+    setBaltimoreVbnNeighborhoodEnabled,
+    baltimoreVbnDistrictEnabled,
+    setBaltimoreVbnDistrictEnabled,
+    baltimoreVbnPrecinctEnabled,
+    setBaltimoreVbnPrecinctEnabled,
+    baltimoreVacantRiskData,
+    setBaltimoreVacantRiskData,
+    baltimorePublicSafetyEnabled,
+    setBaltimorePublicSafetyEnabled,
     stormAdvisoryNeighborhoodsVisible,
     setStormAdvisoryNeighborhoodsVisible,
     baltimore311Visible,

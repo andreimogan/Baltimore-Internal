@@ -21,6 +21,26 @@ const baltimoreCategories = [
     name: '311 Service Requests',
     layers: 'dynamic', // Will be populated from fetched data
   },
+  {
+    id: 'parcels',
+    name: 'Parcels',
+    layers: [], // Custom content (on-demand parcels filtered by enabled boundaries)
+  },
+  {
+    id: 'buildings',
+    name: 'Buildings Footprint',
+    layers: [], // Custom content (on-demand building footprints filtered by enabled boundaries)
+  },
+  {
+    id: 'vacant',
+    name: 'Vacant Building Notice',
+    layers: [], // Custom content (vacant-notice points filtered by enabled boundaries)
+  },
+  {
+    id: 'usecases',
+    name: 'Use Cases',
+    layers: [], // Custom content (risk/decision use-case toggles, e.g. Public Safety)
+  },
 ]
 
 export default function ManageMapLayersPanel() {
@@ -42,6 +62,37 @@ export default function ManageMapLayersPanel() {
     setBaltimoreDistrictHidden,
     districtInsightsEnabled,
     setDistrictInsightsEnabled,
+    baltimoreWardPrecinctsData,
+    baltimoreWardPrecinctsAll,
+    setBaltimoreWardPrecinctsAll,
+    baltimoreWardPrecinctHidden,
+    setBaltimoreWardPrecinctHidden,
+    baltimoreParcelsEnabled,
+    setBaltimoreParcelsEnabled,
+    baltimoreParcelNeighborhoodEnabled,
+    setBaltimoreParcelNeighborhoodEnabled,
+    baltimoreParcelDistrictEnabled,
+    setBaltimoreParcelDistrictEnabled,
+    baltimoreParcelPrecinctEnabled,
+    setBaltimoreParcelPrecinctEnabled,
+    baltimoreBuildingsEnabled,
+    setBaltimoreBuildingsEnabled,
+    baltimoreBuildingNeighborhoodEnabled,
+    setBaltimoreBuildingNeighborhoodEnabled,
+    baltimoreBuildingDistrictEnabled,
+    setBaltimoreBuildingDistrictEnabled,
+    baltimoreBuildingPrecinctEnabled,
+    setBaltimoreBuildingPrecinctEnabled,
+    baltimoreVbnEnabled,
+    setBaltimoreVbnEnabled,
+    baltimoreVbnNeighborhoodEnabled,
+    setBaltimoreVbnNeighborhoodEnabled,
+    baltimoreVbnDistrictEnabled,
+    setBaltimoreVbnDistrictEnabled,
+    baltimoreVbnPrecinctEnabled,
+    setBaltimoreVbnPrecinctEnabled,
+    baltimorePublicSafetyEnabled,
+    setBaltimorePublicSafetyEnabled,
     selectedYear,
     selectedDate,
     mapLibreColors,
@@ -85,13 +136,27 @@ export default function ManageMapLayersPanel() {
   }, [layersVisible, setPosition])
 
   const [searchQuery, setSearchQuery] = useState('')
-  const [expandedCategories, setExpandedCategories] = useState({ requests: true })
+  const [expandedCategories, setExpandedCategories] = useState({ requests: true, parcels: false, buildings: false, vacant: false, usecases: false })
   const [expandedBuckets, setExpandedBuckets] = useState({}) // Track which 311 buckets are expanded
   const [basemapStyleOpen, setBasemapStyleOpen] = useState(false)
   const [expandedHoodSections, setExpandedHoodSections] = useState({
     showNeighborhoods: false,
     showDistricts: false,
+    showPrecincts: false,
+    showParcelNeighborhoods: false,
+    showParcelDistricts: false,
+    showParcelPrecincts: false,
+    showBuildingNeighborhoods: false,
+    showBuildingDistricts: false,
+    showBuildingPrecincts: false,
+    showVacantNeighborhoods: false,
+    showVacantDistricts: false,
+    showVacantPrecincts: false,
   })
+  const [expandedPrecinctGroups, setExpandedPrecinctGroups] = useState({})
+  const [expandedParcelPrecinctGroups, setExpandedParcelPrecinctGroups] = useState({})
+  const [expandedBuildingPrecinctGroups, setExpandedBuildingPrecinctGroups] = useState({})
+  const [expandedVacantPrecinctGroups, setExpandedVacantPrecinctGroups] = useState({})
   const [layerStates, setLayerStates] = useState({
     'baltimore-311-cluster': baltimore311Clustered,
   })
@@ -170,6 +235,50 @@ export default function ManageMapLayersPanel() {
       'AREA_NAME'
     )
   }, [baltimoreDistrictsData, baltimore311Data, baltimore311Types, baltimore311HideClosed])
+
+  const densityMapForPrecincts = useMemo(() => {
+    if (!baltimoreWardPrecinctsData?.features?.length || !baltimore311Data?.features?.length) {
+      return {}
+    }
+    const enabledTypes = Object.keys(baltimore311Types).filter((t) => baltimore311Types[t])
+    const filtered311Data = {
+      type: 'FeatureCollection',
+      features: baltimore311Data.features.filter((f) => {
+        const srType = f?.properties?.SRType
+        return srType && enabledTypes.includes(srType)
+      }),
+    }
+    return calculateBoundary311Density(
+      baltimoreWardPrecinctsData,
+      filtered311Data,
+      baltimore311HideClosed,
+      'VDTST12'
+    )
+  }, [baltimoreWardPrecinctsData, baltimore311Data, baltimore311Types, baltimore311HideClosed])
+
+  // Precincts grouped by their parent council district (COUNCIL_DI), each sorted by precinct id.
+  const precinctsByDistrict = useMemo(() => {
+    if (!baltimoreWardPrecinctsData?.features?.length) return []
+    const groups = new Map()
+    baltimoreWardPrecinctsData.features.forEach((f) => {
+      const districtId = String(f.properties?.COUNCIL_DI ?? '').trim()
+      const precinctId = String(f.properties?.VDTST12 ?? '').trim()
+      if (!districtId || !precinctId) return
+      if (!groups.has(districtId)) groups.set(districtId, [])
+      groups.get(districtId).push({ id: precinctId })
+    })
+    return Array.from(groups.entries())
+      .map(([districtId, precincts]) => ({
+        districtId,
+        precincts: precincts.sort((a, b) => a.id.localeCompare(b.id)),
+      }))
+      .sort((a, b) => Number(a.districtId) - Number(b.districtId))
+  }, [baltimoreWardPrecinctsData])
+
+  const totalPrecinctCount = useMemo(
+    () => precinctsByDistrict.reduce((sum, g) => sum + g.precincts.length, 0),
+    [precinctsByDistrict]
+  )
 
   const allNeighborhoodNames = useMemo(() => {
     if (!baltimoreNeighborhoodsData?.features?.length) return []
@@ -335,6 +444,148 @@ export default function ManageMapLayersPanel() {
     }
   }
 
+  const isPrecinctShownOnMap = (id) => baltimoreWardPrecinctHidden[id] !== true
+
+  const togglePrecinctHidden = (id) => {
+    setBaltimoreWardPrecinctHidden((prev) => {
+      const next = { ...prev }
+      next[id] = prev[id] === true ? false : true
+      return next
+    })
+    setBaltimoreWardPrecinctsAll(true)
+  }
+
+  const getPrecinctGroupBulkState = (precincts) => {
+    if (!precincts.length) return 'off'
+    let onCount = 0
+    for (const p of precincts) {
+      if (baltimoreWardPrecinctHidden[p.id] !== true) onCount++
+    }
+    if (onCount === 0) return 'off'
+    if (onCount === precincts.length) return 'on'
+    return 'mixed'
+  }
+
+  const togglePrecinctGroup = (precincts) => {
+    const hideAll = getPrecinctGroupBulkState(precincts) !== 'off'
+    setBaltimoreWardPrecinctHidden((prev) => {
+      const next = { ...prev }
+      precincts.forEach((p) => {
+        if (hideAll) next[p.id] = true
+        else delete next[p.id]
+      })
+      return next
+    })
+    setBaltimoreWardPrecinctsAll(true)
+  }
+
+  // --- Parcels: opt-in (key -> true) toggles. Enabling any also turns on the master. ---
+  const toggleParcelKey = (setter, key) => {
+    setter((prev) => {
+      const next = { ...prev }
+      if (next[key]) delete next[key]
+      else next[key] = true
+      return next
+    })
+    setBaltimoreParcelsEnabled(true)
+  }
+  const toggleParcelNeighborhood = (name) =>
+    toggleParcelKey(setBaltimoreParcelNeighborhoodEnabled, name)
+  const toggleParcelDistrict = (id) => toggleParcelKey(setBaltimoreParcelDistrictEnabled, id)
+  const toggleParcelPrecinct = (id) => toggleParcelKey(setBaltimoreParcelPrecinctEnabled, id)
+
+  const getParcelPrecinctGroupState = (precincts) => {
+    if (!precincts.length) return 'off'
+    let on = 0
+    for (const p of precincts) if (baltimoreParcelPrecinctEnabled[p.id]) on++
+    if (on === 0) return 'off'
+    if (on === precincts.length) return 'on'
+    return 'mixed'
+  }
+  const toggleParcelPrecinctGroup = (precincts) => {
+    const enableAll = getParcelPrecinctGroupState(precincts) !== 'on'
+    setBaltimoreParcelPrecinctEnabled((prev) => {
+      const next = { ...prev }
+      precincts.forEach((p) => {
+        if (enableAll) next[p.id] = true
+        else delete next[p.id]
+      })
+      return next
+    })
+    setBaltimoreParcelsEnabled(true)
+  }
+
+  // --- Buildings: same opt-in toggles as parcels, against the building records. ---
+  const toggleBuildingKey = (setter, key) => {
+    setter((prev) => {
+      const next = { ...prev }
+      if (next[key]) delete next[key]
+      else next[key] = true
+      return next
+    })
+    setBaltimoreBuildingsEnabled(true)
+  }
+  const toggleBuildingNeighborhood = (name) =>
+    toggleBuildingKey(setBaltimoreBuildingNeighborhoodEnabled, name)
+  const toggleBuildingDistrict = (id) => toggleBuildingKey(setBaltimoreBuildingDistrictEnabled, id)
+  const toggleBuildingPrecinct = (id) => toggleBuildingKey(setBaltimoreBuildingPrecinctEnabled, id)
+
+  const getBuildingPrecinctGroupState = (precincts) => {
+    if (!precincts.length) return 'off'
+    let on = 0
+    for (const p of precincts) if (baltimoreBuildingPrecinctEnabled[p.id]) on++
+    if (on === 0) return 'off'
+    if (on === precincts.length) return 'on'
+    return 'mixed'
+  }
+  const toggleBuildingPrecinctGroup = (precincts) => {
+    const enableAll = getBuildingPrecinctGroupState(precincts) !== 'on'
+    setBaltimoreBuildingPrecinctEnabled((prev) => {
+      const next = { ...prev }
+      precincts.forEach((p) => {
+        if (enableAll) next[p.id] = true
+        else delete next[p.id]
+      })
+      return next
+    })
+    setBaltimoreBuildingsEnabled(true)
+  }
+
+  // --- Vacant Building Notices: same opt-in toggles, against the VBN records. ---
+  const toggleVacantKey = (setter, key) => {
+    setter((prev) => {
+      const next = { ...prev }
+      if (next[key]) delete next[key]
+      else next[key] = true
+      return next
+    })
+    setBaltimoreVbnEnabled(true)
+  }
+  const toggleVacantNeighborhood = (name) => toggleVacantKey(setBaltimoreVbnNeighborhoodEnabled, name)
+  const toggleVacantDistrict = (id) => toggleVacantKey(setBaltimoreVbnDistrictEnabled, id)
+  const toggleVacantPrecinct = (id) => toggleVacantKey(setBaltimoreVbnPrecinctEnabled, id)
+
+  const getVacantPrecinctGroupState = (precincts) => {
+    if (!precincts.length) return 'off'
+    let on = 0
+    for (const p of precincts) if (baltimoreVbnPrecinctEnabled[p.id]) on++
+    if (on === 0) return 'off'
+    if (on === precincts.length) return 'on'
+    return 'mixed'
+  }
+  const toggleVacantPrecinctGroup = (precincts) => {
+    const enableAll = getVacantPrecinctGroupState(precincts) !== 'on'
+    setBaltimoreVbnPrecinctEnabled((prev) => {
+      const next = { ...prev }
+      precincts.forEach((p) => {
+        if (enableAll) next[p.id] = true
+        else delete next[p.id]
+      })
+      return next
+    })
+    setBaltimoreVbnEnabled(true)
+  }
+
   const getBucketRequestCount = (types) => {
     if (!baltimore311Data) return 0
     // Data is already filtered by date from the API, no need to re-filter
@@ -433,6 +684,55 @@ export default function ManageMapLayersPanel() {
         .filter(Boolean) // Remove nulls
     }
   })
+
+  // ---- Parcels accordion render helpers ----
+  const parcelSwitch = (on, onClick, label, size = 'sm') => (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label={label}
+      className={`relative inline-flex shrink-0 cursor-pointer items-center rounded-full transition-colors ${size === 'lg' ? 'h-5 w-9 scale-85' : 'h-4 w-8'}`}
+      style={{ backgroundColor: on ? 'var(--ui-accent-muted)' : 'var(--ui-control-border)' }}
+      onClick={(e) => { e.stopPropagation(); onClick() }}
+    >
+      <span
+        className={`pointer-events-none absolute left-0.5 top-0.5 rounded-full bg-white shadow transition-transform ${size === 'lg' ? 'h-4 w-4' : 'h-3 w-3'}`}
+        style={{ transform: on ? (size === 'lg' ? 'translateX(16px)' : 'translateX(14px)') : 'translateX(0)' }}
+      />
+    </button>
+  )
+
+  const parcelSubHeader = (sectionKey, title, count) => {
+    const open = expandedHoodSections[sectionKey]
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        className="rounded-lg border px-2.5 py-1.5 flex items-center gap-1.5 cursor-pointer"
+        style={{ borderColor: 'var(--ui-border)' }}
+        onClick={() => setExpandedHoodSections((prev) => ({ ...prev, [sectionKey]: !prev[sectionKey] }))}
+      >
+        <div className="w-3 h-3 flex items-center justify-center shrink-0" style={{ color: 'var(--ui-text-muted)' }}>
+          {open ? <ChevronDown className="w-2.5 h-2.5" aria-hidden="true" /> : <ChevronRight className="w-2.5 h-2.5" aria-hidden="true" />}
+        </div>
+        <span className="text-[12px] font-medium leading-tight truncate" style={{ color: 'var(--ui-text-secondary)' }}>{title}</span>
+        <span className="text-[10px] opacity-50 shrink-0">({count})</span>
+      </div>
+    )
+  }
+
+  const parcelItemRow = (label, on, onToggle) => (
+    <div
+      className="rounded-md border px-2 py-1 flex items-center justify-between gap-2"
+      style={{ borderColor: on ? 'var(--ui-status-info-border)' : 'var(--ui-border)', backgroundColor: on ? 'var(--ui-status-info-bg)' : 'transparent' }}
+    >
+      <span className="text-[11px] font-medium leading-tight truncate" style={{ color: 'var(--ui-text-secondary)' }}>{label}</span>
+      {parcelSwitch(on, onToggle, `Toggle parcels for ${label}`)}
+    </div>
+  )
+
+  const totalParcelPrecincts = precinctsByDistrict.reduce((s, g) => s + g.precincts.length, 0)
 
   return (
     <div
@@ -1163,12 +1463,599 @@ export default function ManageMapLayersPanel() {
                           )}
                         </div>
                       </div>
+
+                      <div className="mt-4 pt-3 border-t" style={{ borderColor: 'var(--ui-border)' }}>
+                        <div className="text-[11px] font-semibold mb-2 opacity-60" style={{ color: 'var(--ui-text-secondary)' }}>
+                          WARD PRECINCTS
+                        </div>
+
+                        <div className="space-y-1">
+                          <div
+                            className="rounded-lg border px-2.5 py-1.5 flex items-center justify-between gap-2 transition-colors"
+                            style={{
+                              borderColor: baltimoreWardPrecinctsAll ? 'var(--ui-status-info-border)' : 'var(--ui-border)',
+                              backgroundColor: baltimoreWardPrecinctsAll ? 'var(--ui-status-info-bg)' : 'transparent',
+                            }}
+                          >
+                            <div
+                              role="button"
+                              tabIndex={0}
+                              className="flex items-center gap-1.5 flex-1 min-w-0 cursor-pointer"
+                              onClick={() =>
+                                setExpandedHoodSections((prev) => ({ ...prev, showPrecincts: !prev.showPrecincts }))
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault()
+                                  setExpandedHoodSections((prev) => ({ ...prev, showPrecincts: !prev.showPrecincts }))
+                                }
+                              }}
+                            >
+                              <div className="w-3 h-3 flex items-center justify-center shrink-0" style={{ color: 'var(--ui-text-muted)' }}>
+                                {expandedHoodSections.showPrecincts ? (
+                                  <ChevronDown className="w-2.5 h-2.5" aria-hidden="true" />
+                                ) : (
+                                  <ChevronRight className="w-2.5 h-2.5" aria-hidden="true" />
+                                )}
+                              </div>
+                              <span className="text-[12px] font-medium leading-tight truncate" style={{ color: 'var(--ui-text-secondary)' }}>
+                                Show precincts
+                              </span>
+                              <span className="text-[10px] opacity-50 shrink-0">({totalPrecinctCount})</span>
+                            </div>
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={baltimoreWardPrecinctsAll}
+                              aria-label="Show all ward precincts on map"
+                              className="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors scale-85"
+                              style={{
+                                backgroundColor: baltimoreWardPrecinctsAll ? 'var(--ui-accent-muted)' : 'var(--ui-control-border)',
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setBaltimoreWardPrecinctsAll((prev) => !prev)
+                              }}
+                            >
+                              <span
+                                className="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform"
+                                style={{ transform: baltimoreWardPrecinctsAll ? 'translateX(16px)' : 'translateX(0)' }}
+                              />
+                            </button>
+                          </div>
+
+                          {expandedHoodSections.showPrecincts && (
+                            <div className="space-y-1 ml-3 max-h-64 overflow-y-auto pr-0.5">
+                              {precinctsByDistrict.length === 0 ? (
+                                <p className="text-[11px] px-2 py-1.5 rounded-md" style={{ color: 'var(--ui-text-muted)' }}>
+                                  Loading ward-precinct boundaries…
+                                </p>
+                              ) : (
+                                precinctsByDistrict.map((group) => {
+                                  const groupOpen = expandedPrecinctGroups[group.districtId] === true
+                                  const bulkState = getPrecinctGroupBulkState(group.precincts)
+                                  return (
+                                    <div key={`precinct-group-${group.districtId}`}>
+                                      <div
+                                        className="rounded-md border px-2 py-1.5 flex items-center justify-between gap-2 transition-colors"
+                                        style={{
+                                          borderColor: bulkState === 'off' ? 'var(--ui-border)' : 'var(--ui-status-info-border)',
+                                          backgroundColor: bulkState === 'off' ? 'transparent' : 'var(--ui-status-info-bg)',
+                                        }}
+                                      >
+                                        <div
+                                          role="button"
+                                          tabIndex={0}
+                                          className="flex items-center gap-1.5 flex-1 min-w-0 cursor-pointer"
+                                          onClick={() =>
+                                            setExpandedPrecinctGroups((prev) => ({
+                                              ...prev,
+                                              [group.districtId]: !prev[group.districtId],
+                                            }))
+                                          }
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                              e.preventDefault()
+                                              setExpandedPrecinctGroups((prev) => ({
+                                                ...prev,
+                                                [group.districtId]: !prev[group.districtId],
+                                              }))
+                                            }
+                                          }}
+                                        >
+                                          <div className="w-3 h-3 flex items-center justify-center shrink-0" style={{ color: 'var(--ui-text-muted)' }}>
+                                            {groupOpen ? (
+                                              <ChevronDown className="w-2.5 h-2.5" aria-hidden="true" />
+                                            ) : (
+                                              <ChevronRight className="w-2.5 h-2.5" aria-hidden="true" />
+                                            )}
+                                          </div>
+                                          <span className="text-[11px] font-medium leading-tight truncate" style={{ color: 'var(--ui-text-secondary)' }}>
+                                            District {group.districtId}
+                                          </span>
+                                          <span className="text-[10px] opacity-50 shrink-0">({group.precincts.length})</span>
+                                        </div>
+                                        <button
+                                          type="button"
+                                          role="switch"
+                                          aria-checked={bulkState === 'on'}
+                                          aria-label={`Toggle all precincts in District ${group.districtId}`}
+                                          className="relative inline-flex h-4 w-8 shrink-0 cursor-pointer items-center rounded-full transition-colors"
+                                          style={{ backgroundColor: bulkState === 'off' ? 'var(--ui-control-border)' : 'var(--ui-accent-muted)' }}
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            togglePrecinctGroup(group.precincts)
+                                          }}
+                                        >
+                                          {bulkState === 'mixed' ? (
+                                            <Minus className="w-2.5 h-2.5 text-white absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" aria-hidden />
+                                          ) : (
+                                            <span
+                                              className="pointer-events-none absolute left-0.5 top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform"
+                                              style={{ transform: bulkState === 'on' ? 'translateX(14px)' : 'translateX(0)' }}
+                                            />
+                                          )}
+                                        </button>
+                                      </div>
+
+                                      {groupOpen && (
+                                        <div className="space-y-1 ml-3 mt-1">
+                                          {group.precincts.map((precinct) => {
+                                            const shown = isPrecinctShownOnMap(precinct.id)
+                                            const openCount = densityMapForPrecincts[precinct.id] ?? 0
+                                            return (
+                                              <div
+                                                key={`precinct-${precinct.id}`}
+                                                className="rounded-md border transition-colors px-2 py-1 flex items-center justify-between gap-2"
+                                                style={{
+                                                  borderColor: shown ? 'var(--ui-status-info-border)' : 'var(--ui-border)',
+                                                  backgroundColor: shown ? 'var(--ui-status-info-bg)' : 'transparent',
+                                                }}
+                                              >
+                                                <div className="min-w-0 flex-1">
+                                                  <span className="text-[11px] font-medium leading-tight block truncate" style={{ color: 'var(--ui-text-secondary)' }}>
+                                                    Precinct {precinct.id}
+                                                  </span>
+                                                  {openCount > 0 ? (
+                                                    <span className="text-[10px] opacity-50">{openCount} open</span>
+                                                  ) : null}
+                                                </div>
+                                                <button
+                                                  type="button"
+                                                  role="switch"
+                                                  aria-checked={shown}
+                                                  aria-label={`Toggle Precinct ${precinct.id} on map`}
+                                                  className="relative inline-flex h-4 w-8 shrink-0 cursor-pointer items-center rounded-full transition-colors"
+                                                  style={{ backgroundColor: shown ? 'var(--ui-accent-muted)' : 'var(--ui-control-border)' }}
+                                                  onClick={() => togglePrecinctHidden(precinct.id)}
+                                                >
+                                                  <span
+                                                    className="pointer-events-none absolute left-0.5 top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform"
+                                                    style={{ transform: shown ? 'translateX(14px)' : 'translateX(0)' }}
+                                                  />
+                                                </button>
+                                              </div>
+                                            )
+                                          })}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )
+                                })
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </>
                   )}
                 </div>
               )}
 
-              {expandedCategories[category.id] && category.layers.length === 0 && (
+              {expandedCategories[category.id] && category.id === 'parcels' && (
+                <div className="space-y-1.5 mt-2 ml-4">
+                  <p className="text-[11px] leading-snug" style={{ color: 'var(--ui-text-muted)' }}>
+                    Parcels load only for the neighborhoods, districts, or precincts you enable below.
+                  </p>
+
+                  {/* Master toggle */}
+                  <div
+                    className="rounded-lg border px-2.5 py-1.5 flex items-center justify-between gap-2"
+                    style={{
+                      borderColor: baltimoreParcelsEnabled ? 'var(--ui-status-info-border)' : 'var(--ui-border)',
+                      backgroundColor: baltimoreParcelsEnabled ? 'var(--ui-status-info-bg)' : 'transparent',
+                    }}
+                  >
+                    <span className="text-[12px] font-medium" style={{ color: 'var(--ui-text-secondary)' }}>Show parcels</span>
+                    {parcelSwitch(baltimoreParcelsEnabled, () => setBaltimoreParcelsEnabled((p) => !p), 'Show parcels', 'lg')}
+                  </div>
+
+                  {/* By neighborhood */}
+                  <div className="space-y-1">
+                    {parcelSubHeader('showParcelNeighborhoods', 'By neighborhood', allNeighborhoodNames.length)}
+                    {expandedHoodSections.showParcelNeighborhoods && (
+                      <div className="space-y-1 ml-3 max-h-52 overflow-y-auto pr-0.5">
+                        {allNeighborhoodNames.length === 0 ? (
+                          <p className="text-[11px] px-2 py-1.5" style={{ color: 'var(--ui-text-muted)' }}>Loading neighborhoods…</p>
+                        ) : (
+                          allNeighborhoodNames.map((name) => (
+                            <div key={`pn-${name}`}>
+                              {parcelItemRow(name, !!baltimoreParcelNeighborhoodEnabled[name], () => toggleParcelNeighborhood(name))}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* By district */}
+                  <div className="space-y-1">
+                    {parcelSubHeader('showParcelDistricts', 'By district', allDistrictEntries.length)}
+                    {expandedHoodSections.showParcelDistricts && (
+                      <div className="space-y-1 ml-3 max-h-52 overflow-y-auto pr-0.5">
+                        {allDistrictEntries.length === 0 ? (
+                          <p className="text-[11px] px-2 py-1.5" style={{ color: 'var(--ui-text-muted)' }}>Loading districts…</p>
+                        ) : (
+                          allDistrictEntries.map((d) => (
+                            <div key={`pd-${d.id}`}>
+                              {parcelItemRow(`District ${d.id}`, !!baltimoreParcelDistrictEnabled[d.id], () => toggleParcelDistrict(d.id))}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* By precinct (grouped by district) */}
+                  <div className="space-y-1">
+                    {parcelSubHeader('showParcelPrecincts', 'By precinct', totalParcelPrecincts)}
+                    {expandedHoodSections.showParcelPrecincts && (
+                      <div className="space-y-1 ml-3 max-h-64 overflow-y-auto pr-0.5">
+                        {precinctsByDistrict.length === 0 ? (
+                          <p className="text-[11px] px-2 py-1.5" style={{ color: 'var(--ui-text-muted)' }}>Loading precincts…</p>
+                        ) : (
+                          precinctsByDistrict.map((group) => {
+                            const open = expandedParcelPrecinctGroups[group.districtId] === true
+                            const gs = getParcelPrecinctGroupState(group.precincts)
+                            return (
+                              <div key={`pp-${group.districtId}`}>
+                                <div
+                                  className="rounded-md border px-2 py-1.5 flex items-center justify-between gap-2"
+                                  style={{
+                                    borderColor: gs === 'off' ? 'var(--ui-border)' : 'var(--ui-status-info-border)',
+                                    backgroundColor: gs === 'off' ? 'transparent' : 'var(--ui-status-info-bg)',
+                                  }}
+                                >
+                                  <div
+                                    role="button"
+                                    tabIndex={0}
+                                    className="flex items-center gap-1.5 flex-1 min-w-0 cursor-pointer"
+                                    onClick={() =>
+                                      setExpandedParcelPrecinctGroups((prev) => ({ ...prev, [group.districtId]: !prev[group.districtId] }))
+                                    }
+                                  >
+                                    <div className="w-3 h-3 flex items-center justify-center shrink-0" style={{ color: 'var(--ui-text-muted)' }}>
+                                      {open ? <ChevronDown className="w-2.5 h-2.5" aria-hidden="true" /> : <ChevronRight className="w-2.5 h-2.5" aria-hidden="true" />}
+                                    </div>
+                                    <span className="text-[11px] font-medium leading-tight truncate" style={{ color: 'var(--ui-text-secondary)' }}>District {group.districtId}</span>
+                                    <span className="text-[10px] opacity-50 shrink-0">({group.precincts.length})</span>
+                                  </div>
+                                  {gs === 'mixed' ? (
+                                    <button
+                                      type="button"
+                                      aria-label={`Toggle parcels for District ${group.districtId} precincts`}
+                                      onClick={(e) => { e.stopPropagation(); toggleParcelPrecinctGroup(group.precincts) }}
+                                      className="relative inline-flex h-4 w-8 shrink-0 items-center rounded-full cursor-pointer"
+                                      style={{ backgroundColor: 'var(--ui-accent-muted)' }}
+                                    >
+                                      <Minus className="w-2.5 h-2.5 text-white absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" aria-hidden />
+                                    </button>
+                                  ) : (
+                                    parcelSwitch(gs === 'on', () => toggleParcelPrecinctGroup(group.precincts), `Toggle parcels for District ${group.districtId} precincts`)
+                                  )}
+                                </div>
+                                {open && (
+                                  <div className="space-y-1 ml-3 mt-1">
+                                    {group.precincts.map((p) => (
+                                      <div key={`ppx-${p.id}`}>
+                                        {parcelItemRow(`Precinct ${p.id}`, !!baltimoreParcelPrecinctEnabled[p.id], () => toggleParcelPrecinct(p.id))}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {expandedCategories[category.id] && category.id === 'buildings' && (
+                <div className="space-y-1.5 mt-2 ml-4">
+                  <p className="text-[11px] leading-snug" style={{ color: 'var(--ui-text-muted)' }}>
+                    Building footprints load only for the neighborhoods, districts, or precincts you enable below.
+                  </p>
+
+                  {/* Master toggle */}
+                  <div
+                    className="rounded-lg border px-2.5 py-1.5 flex items-center justify-between gap-2"
+                    style={{
+                      borderColor: baltimoreBuildingsEnabled ? 'var(--ui-status-info-border)' : 'var(--ui-border)',
+                      backgroundColor: baltimoreBuildingsEnabled ? 'var(--ui-status-info-bg)' : 'transparent',
+                    }}
+                  >
+                    <span className="text-[12px] font-medium" style={{ color: 'var(--ui-text-secondary)' }}>Show buildings</span>
+                    {parcelSwitch(baltimoreBuildingsEnabled, () => setBaltimoreBuildingsEnabled((p) => !p), 'Show building footprints', 'lg')}
+                  </div>
+
+                  {/* By neighborhood */}
+                  <div className="space-y-1">
+                    {parcelSubHeader('showBuildingNeighborhoods', 'By neighborhood', allNeighborhoodNames.length)}
+                    {expandedHoodSections.showBuildingNeighborhoods && (
+                      <div className="space-y-1 ml-3 max-h-52 overflow-y-auto pr-0.5">
+                        {allNeighborhoodNames.length === 0 ? (
+                          <p className="text-[11px] px-2 py-1.5" style={{ color: 'var(--ui-text-muted)' }}>Loading neighborhoods…</p>
+                        ) : (
+                          allNeighborhoodNames.map((name) => (
+                            <div key={`bn-${name}`}>
+                              {parcelItemRow(name, !!baltimoreBuildingNeighborhoodEnabled[name], () => toggleBuildingNeighborhood(name))}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* By district */}
+                  <div className="space-y-1">
+                    {parcelSubHeader('showBuildingDistricts', 'By district', allDistrictEntries.length)}
+                    {expandedHoodSections.showBuildingDistricts && (
+                      <div className="space-y-1 ml-3 max-h-52 overflow-y-auto pr-0.5">
+                        {allDistrictEntries.length === 0 ? (
+                          <p className="text-[11px] px-2 py-1.5" style={{ color: 'var(--ui-text-muted)' }}>Loading districts…</p>
+                        ) : (
+                          allDistrictEntries.map((d) => (
+                            <div key={`bd-${d.id}`}>
+                              {parcelItemRow(`District ${d.id}`, !!baltimoreBuildingDistrictEnabled[d.id], () => toggleBuildingDistrict(d.id))}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* By precinct (grouped by district) */}
+                  <div className="space-y-1">
+                    {parcelSubHeader('showBuildingPrecincts', 'By precinct', totalParcelPrecincts)}
+                    {expandedHoodSections.showBuildingPrecincts && (
+                      <div className="space-y-1 ml-3 max-h-64 overflow-y-auto pr-0.5">
+                        {precinctsByDistrict.length === 0 ? (
+                          <p className="text-[11px] px-2 py-1.5" style={{ color: 'var(--ui-text-muted)' }}>Loading precincts…</p>
+                        ) : (
+                          precinctsByDistrict.map((group) => {
+                            const open = expandedBuildingPrecinctGroups[group.districtId] === true
+                            const gs = getBuildingPrecinctGroupState(group.precincts)
+                            return (
+                              <div key={`bp-${group.districtId}`}>
+                                <div
+                                  className="rounded-md border px-2 py-1.5 flex items-center justify-between gap-2"
+                                  style={{
+                                    borderColor: gs === 'off' ? 'var(--ui-border)' : 'var(--ui-status-info-border)',
+                                    backgroundColor: gs === 'off' ? 'transparent' : 'var(--ui-status-info-bg)',
+                                  }}
+                                >
+                                  <div
+                                    role="button"
+                                    tabIndex={0}
+                                    className="flex items-center gap-1.5 flex-1 min-w-0 cursor-pointer"
+                                    onClick={() =>
+                                      setExpandedBuildingPrecinctGroups((prev) => ({ ...prev, [group.districtId]: !prev[group.districtId] }))
+                                    }
+                                  >
+                                    <div className="w-3 h-3 flex items-center justify-center shrink-0" style={{ color: 'var(--ui-text-muted)' }}>
+                                      {open ? <ChevronDown className="w-2.5 h-2.5" aria-hidden="true" /> : <ChevronRight className="w-2.5 h-2.5" aria-hidden="true" />}
+                                    </div>
+                                    <span className="text-[11px] font-medium leading-tight truncate" style={{ color: 'var(--ui-text-secondary)' }}>District {group.districtId}</span>
+                                    <span className="text-[10px] opacity-50 shrink-0">({group.precincts.length})</span>
+                                  </div>
+                                  {gs === 'mixed' ? (
+                                    <button
+                                      type="button"
+                                      aria-label={`Toggle buildings for District ${group.districtId} precincts`}
+                                      onClick={(e) => { e.stopPropagation(); toggleBuildingPrecinctGroup(group.precincts) }}
+                                      className="relative inline-flex h-4 w-8 shrink-0 items-center rounded-full cursor-pointer"
+                                      style={{ backgroundColor: 'var(--ui-accent-muted)' }}
+                                    >
+                                      <Minus className="w-2.5 h-2.5 text-white absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" aria-hidden />
+                                    </button>
+                                  ) : (
+                                    parcelSwitch(gs === 'on', () => toggleBuildingPrecinctGroup(group.precincts), `Toggle buildings for District ${group.districtId} precincts`)
+                                  )}
+                                </div>
+                                {open && (
+                                  <div className="space-y-1 ml-3 mt-1">
+                                    {group.precincts.map((p) => (
+                                      <div key={`bpx-${p.id}`}>
+                                        {parcelItemRow(`Precinct ${p.id}`, !!baltimoreBuildingPrecinctEnabled[p.id], () => toggleBuildingPrecinct(p.id))}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {expandedCategories[category.id] && category.id === 'vacant' && (
+                <div className="space-y-1.5 mt-2 ml-4">
+                  <p className="text-[11px] leading-snug" style={{ color: 'var(--ui-text-muted)' }}>
+                    Open vacant building notices load only for the neighborhoods, districts, or precincts you enable below.
+                  </p>
+
+                  {/* Master toggle */}
+                  <div
+                    className="rounded-lg border px-2.5 py-1.5 flex items-center justify-between gap-2"
+                    style={{
+                      borderColor: baltimoreVbnEnabled ? 'var(--ui-status-info-border)' : 'var(--ui-border)',
+                      backgroundColor: baltimoreVbnEnabled ? 'var(--ui-status-info-bg)' : 'transparent',
+                    }}
+                  >
+                    <span className="text-[12px] font-medium" style={{ color: 'var(--ui-text-secondary)' }}>Show vacant notices</span>
+                    {parcelSwitch(baltimoreVbnEnabled, () => setBaltimoreVbnEnabled((p) => !p), 'Show vacant building notices', 'lg')}
+                  </div>
+
+                  {/* By neighborhood */}
+                  <div className="space-y-1">
+                    {parcelSubHeader('showVacantNeighborhoods', 'By neighborhood', allNeighborhoodNames.length)}
+                    {expandedHoodSections.showVacantNeighborhoods && (
+                      <div className="space-y-1 ml-3 max-h-52 overflow-y-auto pr-0.5">
+                        {allNeighborhoodNames.length === 0 ? (
+                          <p className="text-[11px] px-2 py-1.5" style={{ color: 'var(--ui-text-muted)' }}>Loading neighborhoods…</p>
+                        ) : (
+                          allNeighborhoodNames.map((name) => (
+                            <div key={`vn-${name}`}>
+                              {parcelItemRow(name, !!baltimoreVbnNeighborhoodEnabled[name], () => toggleVacantNeighborhood(name))}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* By district */}
+                  <div className="space-y-1">
+                    {parcelSubHeader('showVacantDistricts', 'By district', allDistrictEntries.length)}
+                    {expandedHoodSections.showVacantDistricts && (
+                      <div className="space-y-1 ml-3 max-h-52 overflow-y-auto pr-0.5">
+                        {allDistrictEntries.length === 0 ? (
+                          <p className="text-[11px] px-2 py-1.5" style={{ color: 'var(--ui-text-muted)' }}>Loading districts…</p>
+                        ) : (
+                          allDistrictEntries.map((d) => (
+                            <div key={`vd-${d.id}`}>
+                              {parcelItemRow(`District ${d.id}`, !!baltimoreVbnDistrictEnabled[d.id], () => toggleVacantDistrict(d.id))}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* By precinct (grouped by district) */}
+                  <div className="space-y-1">
+                    {parcelSubHeader('showVacantPrecincts', 'By precinct', totalParcelPrecincts)}
+                    {expandedHoodSections.showVacantPrecincts && (
+                      <div className="space-y-1 ml-3 max-h-64 overflow-y-auto pr-0.5">
+                        {precinctsByDistrict.length === 0 ? (
+                          <p className="text-[11px] px-2 py-1.5" style={{ color: 'var(--ui-text-muted)' }}>Loading precincts…</p>
+                        ) : (
+                          precinctsByDistrict.map((group) => {
+                            const open = expandedVacantPrecinctGroups[group.districtId] === true
+                            const gs = getVacantPrecinctGroupState(group.precincts)
+                            return (
+                              <div key={`vp-${group.districtId}`}>
+                                <div
+                                  className="rounded-md border px-2 py-1.5 flex items-center justify-between gap-2"
+                                  style={{
+                                    borderColor: gs === 'off' ? 'var(--ui-border)' : 'var(--ui-status-info-border)',
+                                    backgroundColor: gs === 'off' ? 'transparent' : 'var(--ui-status-info-bg)',
+                                  }}
+                                >
+                                  <div
+                                    role="button"
+                                    tabIndex={0}
+                                    className="flex items-center gap-1.5 flex-1 min-w-0 cursor-pointer"
+                                    onClick={() =>
+                                      setExpandedVacantPrecinctGroups((prev) => ({ ...prev, [group.districtId]: !prev[group.districtId] }))
+                                    }
+                                  >
+                                    <div className="w-3 h-3 flex items-center justify-center shrink-0" style={{ color: 'var(--ui-text-muted)' }}>
+                                      {open ? <ChevronDown className="w-2.5 h-2.5" aria-hidden="true" /> : <ChevronRight className="w-2.5 h-2.5" aria-hidden="true" />}
+                                    </div>
+                                    <span className="text-[11px] font-medium leading-tight truncate" style={{ color: 'var(--ui-text-secondary)' }}>District {group.districtId}</span>
+                                    <span className="text-[10px] opacity-50 shrink-0">({group.precincts.length})</span>
+                                  </div>
+                                  {gs === 'mixed' ? (
+                                    <button
+                                      type="button"
+                                      aria-label={`Toggle vacant notices for District ${group.districtId} precincts`}
+                                      onClick={(e) => { e.stopPropagation(); toggleVacantPrecinctGroup(group.precincts) }}
+                                      className="relative inline-flex h-4 w-8 shrink-0 items-center rounded-full cursor-pointer"
+                                      style={{ backgroundColor: 'var(--ui-accent-muted)' }}
+                                    >
+                                      <Minus className="w-2.5 h-2.5 text-white absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" aria-hidden />
+                                    </button>
+                                  ) : (
+                                    parcelSwitch(gs === 'on', () => toggleVacantPrecinctGroup(group.precincts), `Toggle vacant notices for District ${group.districtId} precincts`)
+                                  )}
+                                </div>
+                                {open && (
+                                  <div className="space-y-1 ml-3 mt-1">
+                                    {group.precincts.map((p) => (
+                                      <div key={`vpx-${p.id}`}>
+                                        {parcelItemRow(`Precinct ${p.id}`, !!baltimoreVbnPrecinctEnabled[p.id], () => toggleVacantPrecinct(p.id))}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {expandedCategories[category.id] && category.id === 'usecases' && (
+                <div className="space-y-2 mt-2 ml-4">
+                  {/* Public Safety toggle */}
+                  <div
+                    className="rounded-lg border px-2.5 py-2"
+                    style={{
+                      borderColor: baltimorePublicSafetyEnabled ? 'var(--ui-status-info-border)' : 'var(--ui-border)',
+                      backgroundColor: baltimorePublicSafetyEnabled ? 'var(--ui-status-info-bg)' : 'transparent',
+                    }}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="text-[12px] font-semibold" style={{ color: 'var(--ui-text-primary)' }}>Public Safety</div>
+                        <div className="text-[10px] leading-snug" style={{ color: 'var(--ui-text-muted)' }}>Vacant building risk — footprints colored by risk score</div>
+                      </div>
+                      {parcelSwitch(baltimorePublicSafetyEnabled, () => setBaltimorePublicSafetyEnabled((p) => !p), 'Show vacant building risk', 'lg')}
+                    </div>
+
+                    {baltimorePublicSafetyEnabled && (
+                      <div className="mt-2 pt-2 border-t" style={{ borderColor: 'var(--ui-border)' }}>
+                        {/* Risk legend */}
+                        <div className="text-[10px] font-semibold opacity-60 mb-1" style={{ color: 'var(--ui-text-secondary)' }}>RISK</div>
+                        <div className="flex items-center gap-1">
+                          <span className="h-2 flex-1 rounded-l" style={{ background: '#22c55e' }} />
+                          <span className="h-2 flex-1" style={{ background: '#eab308' }} />
+                          <span className="h-2 flex-1" style={{ background: '#f97316' }} />
+                          <span className="h-2 flex-1 rounded-r" style={{ background: '#dc2626' }} />
+                        </div>
+                        <div className="flex justify-between text-[9px] mt-0.5 opacity-60" style={{ color: 'var(--ui-text-muted)' }}>
+                          <span>Low</span><span>Moderate</span><span>High</span><span>Severe</span>
+                        </div>
+                        <p className="text-[10px] leading-snug mt-2 opacity-70" style={{ color: 'var(--ui-text-muted)' }}>
+                          Score blends vacancy duration, nearby nuisance 311, absentee ownership, condition, vacancy clustering &amp; market weakness. Click a building for the breakdown. Crime, fire, citations &amp; tax-delinquency are future inputs (no data yet).
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {expandedCategories[category.id] && category.layers.length === 0 && category.id !== 'parcels' && category.id !== 'buildings' && category.id !== 'vacant' && category.id !== 'usecases' && (
                 <p className="text-xs px-4 py-2 ml-4" style={{ color: 'var(--ui-text-muted)' }}>
                   No layers available yet.
                 </p>

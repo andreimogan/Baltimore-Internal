@@ -14,6 +14,21 @@ export const BUILT_IN_MAP_LAYER_DEFAULTS = {
   baltimoreDistrictsAll: true,
   baltimoreDistrictHidden: {},
   districtInsightsEnabled: false,
+  baltimoreWardPrecinctsAll: false,
+  baltimoreWardPrecinctHidden: {},
+  baltimoreParcelsEnabled: false,
+  baltimoreParcelNeighborhoodEnabled: {},
+  baltimoreParcelDistrictEnabled: {},
+  baltimoreParcelPrecinctEnabled: {},
+  baltimoreBuildingsEnabled: false,
+  baltimoreBuildingNeighborhoodEnabled: {},
+  baltimoreBuildingDistrictEnabled: {},
+  baltimoreBuildingPrecinctEnabled: {},
+  baltimoreVbnEnabled: false,
+  baltimoreVbnNeighborhoodEnabled: {},
+  baltimoreVbnDistrictEnabled: {},
+  baltimoreVbnPrecinctEnabled: {},
+  baltimorePublicSafetyEnabled: false,
   stormAdvisoryNeighborhoodsVisible: false,
 }
 
@@ -67,6 +82,36 @@ function sanitizeSnapshot(raw) {
       typeof raw.districtInsightsEnabled === 'boolean'
         ? raw.districtInsightsEnabled
         : BUILT_IN_MAP_LAYER_DEFAULTS.districtInsightsEnabled,
+    baltimoreWardPrecinctsAll:
+      typeof raw.baltimoreWardPrecinctsAll === 'boolean'
+        ? raw.baltimoreWardPrecinctsAll
+        : BUILT_IN_MAP_LAYER_DEFAULTS.baltimoreWardPrecinctsAll,
+    baltimoreWardPrecinctHidden: sanitizeBooleanRecord(raw.baltimoreWardPrecinctHidden),
+    baltimoreParcelsEnabled:
+      typeof raw.baltimoreParcelsEnabled === 'boolean'
+        ? raw.baltimoreParcelsEnabled
+        : BUILT_IN_MAP_LAYER_DEFAULTS.baltimoreParcelsEnabled,
+    baltimoreParcelNeighborhoodEnabled: sanitizeBooleanRecord(raw.baltimoreParcelNeighborhoodEnabled),
+    baltimoreParcelDistrictEnabled: sanitizeBooleanRecord(raw.baltimoreParcelDistrictEnabled),
+    baltimoreParcelPrecinctEnabled: sanitizeBooleanRecord(raw.baltimoreParcelPrecinctEnabled),
+    baltimoreBuildingsEnabled:
+      typeof raw.baltimoreBuildingsEnabled === 'boolean'
+        ? raw.baltimoreBuildingsEnabled
+        : BUILT_IN_MAP_LAYER_DEFAULTS.baltimoreBuildingsEnabled,
+    baltimoreBuildingNeighborhoodEnabled: sanitizeBooleanRecord(raw.baltimoreBuildingNeighborhoodEnabled),
+    baltimoreBuildingDistrictEnabled: sanitizeBooleanRecord(raw.baltimoreBuildingDistrictEnabled),
+    baltimoreBuildingPrecinctEnabled: sanitizeBooleanRecord(raw.baltimoreBuildingPrecinctEnabled),
+    baltimoreVbnEnabled:
+      typeof raw.baltimoreVbnEnabled === 'boolean'
+        ? raw.baltimoreVbnEnabled
+        : BUILT_IN_MAP_LAYER_DEFAULTS.baltimoreVbnEnabled,
+    baltimoreVbnNeighborhoodEnabled: sanitizeBooleanRecord(raw.baltimoreVbnNeighborhoodEnabled),
+    baltimoreVbnDistrictEnabled: sanitizeBooleanRecord(raw.baltimoreVbnDistrictEnabled),
+    baltimoreVbnPrecinctEnabled: sanitizeBooleanRecord(raw.baltimoreVbnPrecinctEnabled),
+    baltimorePublicSafetyEnabled:
+      typeof raw.baltimorePublicSafetyEnabled === 'boolean'
+        ? raw.baltimorePublicSafetyEnabled
+        : BUILT_IN_MAP_LAYER_DEFAULTS.baltimorePublicSafetyEnabled,
     stormAdvisoryNeighborhoodsVisible:
       typeof raw.stormAdvisoryNeighborhoodsVisible === 'boolean'
         ? raw.stormAdvisoryNeighborhoodsVisible
@@ -105,6 +150,16 @@ export function getInitialMapLayerState() {
     baltimore311Types: { ...saved.baltimore311Types },
     baltimoreNeighborhoodHidden: { ...saved.baltimoreNeighborhoodHidden },
     baltimoreDistrictHidden: { ...saved.baltimoreDistrictHidden },
+    baltimoreWardPrecinctHidden: { ...saved.baltimoreWardPrecinctHidden },
+    baltimoreParcelNeighborhoodEnabled: { ...saved.baltimoreParcelNeighborhoodEnabled },
+    baltimoreParcelDistrictEnabled: { ...saved.baltimoreParcelDistrictEnabled },
+    baltimoreParcelPrecinctEnabled: { ...saved.baltimoreParcelPrecinctEnabled },
+    baltimoreBuildingNeighborhoodEnabled: { ...saved.baltimoreBuildingNeighborhoodEnabled },
+    baltimoreBuildingDistrictEnabled: { ...saved.baltimoreBuildingDistrictEnabled },
+    baltimoreBuildingPrecinctEnabled: { ...saved.baltimoreBuildingPrecinctEnabled },
+    baltimoreVbnNeighborhoodEnabled: { ...saved.baltimoreVbnNeighborhoodEnabled },
+    baltimoreVbnDistrictEnabled: { ...saved.baltimoreVbnDistrictEnabled },
+    baltimoreVbnPrecinctEnabled: { ...saved.baltimoreVbnPrecinctEnabled },
   }
 }
 

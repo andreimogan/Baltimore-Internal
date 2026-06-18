@@ -34,6 +34,7 @@ import {
   STORM_ADVISORY_NEIGHBORHOOD_COUNTS,
 } from '../data/stormAdvisoryNeighborhoods'
 import NeighborhoodStatsCard from './NeighborhoodStatsCard'
+import { parcelChunkKey, parcelChunkUrl, buildingChunkUrl } from '../utils/parcelChunks'
 
 const MAPTILER_API_KEY = 'X1kjwlVN29N1UZItdixx'
 
@@ -178,7 +179,28 @@ export default function MapView() {
     baltimoreDistrictsAll,
     baltimoreDistrictHidden,
     districtInsightsEnabled,
-    baltimore311Visible, 
+    baltimoreWardPrecinctsData,
+    setBaltimoreWardPrecinctsData,
+    baltimoreWardPrecinctsAll,
+    baltimoreWardPrecinctHidden,
+    baltimoreParcelsEnabled,
+    baltimoreParcelNeighborhoodEnabled,
+    baltimoreParcelDistrictEnabled,
+    baltimoreParcelPrecinctEnabled,
+    baltimoreBuildingsEnabled,
+    baltimoreBuildingNeighborhoodEnabled,
+    baltimoreBuildingDistrictEnabled,
+    baltimoreBuildingPrecinctEnabled,
+    baltimoreVbnData,
+    setBaltimoreVbnData,
+    baltimoreVbnEnabled,
+    baltimoreVbnNeighborhoodEnabled,
+    baltimoreVbnDistrictEnabled,
+    baltimoreVbnPrecinctEnabled,
+    baltimoreVacantRiskData,
+    setBaltimoreVacantRiskData,
+    baltimorePublicSafetyEnabled,
+    baltimore311Visible,
     baltimore311Style, 
     baltimore311Clustered, 
     baltimore311HideClosed,
@@ -198,6 +220,13 @@ export default function MapView() {
   const mapContainer = useRef(null)
   const map = useRef(null)
   const mapLib = useRef(null) // maplibregl reference for popups/markers
+  /** Cache of loaded parcel chunks: "<kind>:<key>" -> Feature[]. Avoids refetch on toggle. */
+  const parcelChunkCacheRef = useRef(new Map())
+  /** Monotonic id to discard stale parcel-load results when toggles change rapidly. */
+  const parcelLoadReqRef = useRef(0)
+  /** Same as above, for the buildings-footprint layer. */
+  const buildingChunkCacheRef = useRef(new Map())
+  const buildingLoadReqRef = useRef(0)
   // Card markers only: { card, name, neighborhood, renderCard, cardDiv, lngLat }
   const neighborhoodMarkers = useRef([])
   const impactedDensityMapRef = useRef({})
@@ -262,6 +291,109 @@ export default function MapView() {
         /* ignore */
       }
     })
+  }
+
+  const createParcelPopupHtml = (properties = {}) => {
+    const { FULLADDR, OWNER_1, CURRLAND, CURRIMPR, YEAR_BUILD } = properties
+    const totalValue = (Number(CURRLAND) || 0) + (Number(CURRIMPR) || 0)
+    const fmtMoney = (n) => (n > 0 ? `$${Number(n).toLocaleString('en-US')}` : '—')
+    const row = (label, value) => `
+      <div style="display:flex;justify-content:space-between;gap:10px;padding:2px 0;">
+        <span style="opacity:0.6;">${label}</span>
+        <span style="font-weight:600;text-align:right;">${value}</span>
+      </div>`
+    return `
+      <div style="font-size:12px;line-height:1.4;min-width:180px;">
+        <div style="font-weight:700;margin-bottom:4px;">${FULLADDR || 'Parcel'}</div>
+        ${row('Owner', OWNER_1 || '—')}
+        ${row('Assessed value', fmtMoney(totalValue))}
+        ${row('Year built', YEAR_BUILD && Number(YEAR_BUILD) > 0 ? YEAR_BUILD : '—')}
+      </div>
+    `
+  }
+
+  const createBuildingPopupHtml = (properties = {}) => {
+    const { AREA_, SRCDATE } = properties
+    const area = Number(AREA_) > 0 ? `${Math.round(Number(AREA_)).toLocaleString('en-US')} sq ft` : '—'
+    const srcYear = typeof SRCDATE === 'string' && SRCDATE.length >= 4 ? SRCDATE.slice(0, 4) : '—'
+    const row = (label, value) => `
+      <div style="display:flex;justify-content:space-between;gap:10px;padding:2px 0;">
+        <span style="opacity:0.6;">${label}</span>
+        <span style="font-weight:600;text-align:right;">${value}</span>
+      </div>`
+    return `
+      <div style="font-size:12px;line-height:1.4;min-width:170px;">
+        <div style="font-weight:700;margin-bottom:4px;">Building footprint</div>
+        ${row('Footprint area', area)}
+        ${row('Source year', srcYear)}
+      </div>
+    `
+  }
+
+  const createVacantNoticePopupHtml = (properties = {}) => {
+    const { Address, NoticeNum, DateNotice, neighborhood, district } = properties
+    const noticeDate = typeof DateNotice === 'string' && DateNotice.length >= 10 ? DateNotice.slice(0, 10) : '—'
+    const row = (label, value) => `
+      <div style="display:flex;justify-content:space-between;gap:10px;padding:2px 0;">
+        <span style="opacity:0.6;">${label}</span>
+        <span style="font-weight:600;text-align:right;">${value}</span>
+      </div>`
+    return `
+      <div style="font-size:12px;line-height:1.4;min-width:190px;">
+        <div style="font-weight:700;margin-bottom:4px;">${Address || 'Vacant building'}</div>
+        ${row('Notice #', NoticeNum || '—')}
+        ${row('Notice date', noticeDate)}
+        ${row('Neighborhood', neighborhood || '—')}
+        ${row('District', district || '—')}
+      </div>
+    `
+  }
+
+  const createVacantRiskPopupHtml = (properties = {}) => {
+    const p = properties
+    const tierColors = { Low: '#22c55e', Moderate: '#eab308', High: '#f97316', Severe: '#dc2626' }
+    const badge = tierColors[p.tier] || '#9ca3af'
+    const fmtMoney = (n) => (Number(n) > 0 ? `$${Number(n).toLocaleString('en-US')}` : '—')
+    const row = (label, value, dim) => `
+      <div style="display:flex;justify-content:space-between;gap:10px;padding:1.5px 0;${dim ? 'opacity:0.45;' : ''}">
+        <span style="opacity:0.65;">${label}</span><span style="font-weight:600;text-align:right;">${value}</span>
+      </div>`
+    const head = (t) => `<div style="font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;opacity:0.5;margin:6px 0 2px;">${t}</div>`
+    const bar = (label, v) => {
+      const pct = Math.round((Number(v) || 0) * 100)
+      return `<div style="display:flex;align-items:center;gap:6px;padding:1px 0;">
+        <span style="flex:0 0 84px;opacity:0.65;">${label}</span>
+        <span style="flex:1;height:5px;background:rgba(148,163,184,0.25);border-radius:3px;overflow:hidden;">
+          <span style="display:block;height:100%;width:${pct}%;background:${badge};"></span></span></div>`
+    }
+    return `
+      <div style="font-size:12px;line-height:1.4;min-width:210px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2px;">
+          <span style="font-weight:700;">${p.Address || 'Vacant building'}</span>
+          <span style="font-size:10px;font-weight:700;color:#fff;background:${badge};padding:1px 6px;border-radius:10px;">${p.tier || ''}</span>
+        </div>
+        <div style="font-size:13px;font-weight:700;color:${badge};margin-bottom:2px;">Risk ${p.riskScore ?? '—'}/100</div>
+        ${head('Sense')}
+        ${row('Owner', p.owner ? `${p.owner.trim()}` : '—')}
+        ${row('Ownership', p.ownerType || '—')}
+        ${row('Assessed value', fmtMoney(p.assessedValue))}
+        ${row('Vacant for', p.vacancyYears != null ? `${p.vacancyYears} yr` : '—')}
+        ${row('Market tier', p.marketTier || '—')}
+        ${row('Nearby nuisance 311', p.nuisanceCount ?? '—')}
+        ${head('Analyze — risk factors')}
+        ${bar('Vacancy', p.f_vacancy)}
+        ${bar('Nuisance 311', p.f_nuisance)}
+        ${bar('Absentee owner', p.f_absentee)}
+        ${bar('Condition', p.f_condition)}
+        ${bar('Vacancy cluster', p.f_cluster)}
+        ${bar('Weak market', p.f_market)}
+        ${head('Future inputs (no data yet)')}
+        ${row('Crime / violence', 'n/a', true)}
+        ${row('Fire incidents', 'n/a', true)}
+        ${row('Citations', 'n/a', true)}
+        ${row('Tax delinquency', 'n/a', true)}
+      </div>
+    `
   }
 
   const create311PopupHtml = (properties = {}) => {
@@ -407,6 +539,184 @@ export default function MapView() {
       }, firstSymbolId)
 
       ensureCouncilDistrictHighlightLayers(map.current, firstSymbolId)
+
+      // Baltimore ward-precinct subdivisions (local GeoJSON) — the precincts that
+      // tile each council district. Mirrors the council-district layer pattern.
+      map.current.addSource('baltimore-ward-precincts', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+        promoteId: 'VDTST12',
+      })
+
+      map.current.addLayer({
+        id: 'baltimore-ward-precincts-fill',
+        type: 'fill',
+        source: 'baltimore-ward-precincts',
+        paint: {
+          'fill-color': 'rgba(59, 130, 246, 0.12)',
+          'fill-opacity': getNeighborhoodFillOpacityExpression(false),
+        },
+        layout: { visibility: 'none' },
+      }, firstSymbolId)
+
+      map.current.addLayer({
+        id: 'baltimore-ward-precincts-border',
+        type: 'line',
+        source: 'baltimore-ward-precincts',
+        paint: {
+          'line-color': 'rgba(148, 163, 184, 0.55)',
+          'line-width': 0.6,
+          'line-opacity': 0.7,
+        },
+        layout: { visibility: 'none' },
+      }, firstSymbolId)
+
+      map.current.addLayer({
+        id: 'baltimore-ward-precincts-labels',
+        type: 'symbol',
+        source: 'baltimore-ward-precincts',
+        minzoom: 13,
+        layout: {
+          'text-field': ['get', 'VDTST12'],
+          'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
+          'text-size': 10,
+          'text-max-width': 8,
+          visibility: 'none',
+        },
+        paint: {
+          'text-color': '#ffffff',
+          'text-halo-color': 'rgba(0,0,0,0.85)',
+          'text-halo-width': 2,
+          'text-opacity': 0.85,
+        },
+      }, firstSymbolId)
+
+      // Baltimore parcels — on-demand layer. Source is fed by chunk files loaded
+      // per enabled neighborhood/district/precinct (see the parcel-loading effect).
+      map.current.addSource('baltimore-parcels', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+        promoteId: 'PIN',
+      })
+
+      map.current.addLayer({
+        id: 'baltimore-parcels-fill',
+        type: 'fill',
+        source: 'baltimore-parcels',
+        paint: {
+          'fill-color': 'rgba(59, 130, 246, 0.18)',
+          'fill-outline-color': 'rgba(0, 0, 0, 0)',
+        },
+        layout: { visibility: 'none' },
+      }, firstSymbolId)
+
+      map.current.addLayer({
+        id: 'baltimore-parcels-outline',
+        type: 'line',
+        source: 'baltimore-parcels',
+        paint: {
+          'line-color': 'rgba(37, 99, 235, 0.8)',
+          'line-width': 0.7,
+        },
+        layout: { visibility: 'none' },
+      }, firstSymbolId)
+
+      // Baltimore building footprints — on-demand layer, same chunk pattern as
+      // parcels but a distinct (amber) color. Fed by the building-loading effect.
+      map.current.addSource('baltimore-buildings', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+        promoteId: 'GlobalID',
+      })
+
+      map.current.addLayer({
+        id: 'baltimore-buildings-fill',
+        type: 'fill',
+        source: 'baltimore-buildings',
+        paint: {
+          'fill-color': 'rgba(234, 88, 12, 0.18)',
+          'fill-outline-color': 'rgba(0, 0, 0, 0)',
+        },
+        layout: { visibility: 'none' },
+      }, firstSymbolId)
+
+      map.current.addLayer({
+        id: 'baltimore-buildings-outline',
+        type: 'line',
+        source: 'baltimore-buildings',
+        paint: {
+          'line-color': 'rgba(194, 65, 12, 0.85)',
+          'line-width': 0.7,
+        },
+        layout: { visibility: 'none' },
+      }, firstSymbolId)
+
+      // Baltimore vacant building notices — point layer, full dataset loaded once
+      // and filtered in memory by enabled neighborhood/district/precinct.
+      map.current.addSource('baltimore-vacant-notices', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+        promoteId: 'OBJECTID',
+      })
+
+      map.current.addLayer({
+        id: 'baltimore-vacant-notices-points',
+        type: 'circle',
+        source: 'baltimore-vacant-notices',
+        paint: {
+          'circle-color': '#dc2626',
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 2.5, 14, 4.5, 17, 7],
+          'circle-stroke-color': '#ffffff',
+          'circle-stroke-width': 1,
+          'circle-opacity': 0.9,
+        },
+        layout: { visibility: 'none' },
+      })
+
+      // Use Cases → Public Safety: vacant-building risk. Footprint polygons colored
+      // green→red by riskScore (0–100); unmatched notices fall back to colored points.
+      const riskColor = [
+        'interpolate', ['linear'], ['get', 'riskScore'],
+        0, '#22c55e', 33, '#eab308', 66, '#f97316', 100, '#dc2626',
+      ]
+      map.current.addSource('baltimore-vacant-risk', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+        promoteId: 'OBJECTID',
+      })
+
+      map.current.addLayer({
+        id: 'baltimore-vacant-risk-fill',
+        type: 'fill',
+        source: 'baltimore-vacant-risk',
+        filter: ['==', ['geometry-type'], 'Polygon'],
+        paint: { 'fill-color': riskColor, 'fill-opacity': 0.7, 'fill-outline-color': 'rgba(0,0,0,0)' },
+        layout: { visibility: 'none' },
+      }, firstSymbolId)
+
+      map.current.addLayer({
+        id: 'baltimore-vacant-risk-outline',
+        type: 'line',
+        source: 'baltimore-vacant-risk',
+        filter: ['==', ['geometry-type'], 'Polygon'],
+        paint: { 'line-color': riskColor, 'line-width': 1.2 },
+        layout: { visibility: 'none' },
+      }, firstSymbolId)
+
+      map.current.addLayer({
+        id: 'baltimore-vacant-risk-points',
+        type: 'circle',
+        source: 'baltimore-vacant-risk',
+        filter: ['==', ['geometry-type'], 'Point'],
+        paint: {
+          'circle-color': riskColor,
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 3, 14, 5, 17, 8],
+          'circle-stroke-color': '#ffffff',
+          'circle-stroke-width': 1,
+          'circle-opacity': 0.9,
+        },
+        layout: { visibility: 'none' },
+      })
 
       // Baltimore neighborhood boundaries (loaded from server - no optimization)
       map.current.addSource('baltimore-neighborhoods', {
@@ -645,6 +955,61 @@ export default function MapView() {
 
       // Pointer cursor on hover
       ;['baltimore-311-clusters', 'baltimore-311-unclustered', 'baltimore-311-points', 'baltimore-311-heatmap-points'].forEach((id) => {
+        map.current.on('mouseenter', id, () => { map.current.getCanvas().style.cursor = 'pointer' })
+        map.current.on('mouseleave', id, () => { map.current.getCanvas().style.cursor = '' })
+      })
+
+      // Parcel click → info popup (address / owner / value)
+      map.current.on('click', 'baltimore-parcels-fill', (e) => {
+        const feature = e.features?.[0]
+        if (!feature) return
+        new mapLib.current.Popup({ closeButton: true, maxWidth: '260px', className: 'popup-311' })
+          .setLngLat(e.lngLat)
+          .setHTML(createParcelPopupHtml(feature.properties || {}))
+          .addTo(map.current)
+      })
+      map.current.on('mouseenter', 'baltimore-parcels-fill', () => { map.current.getCanvas().style.cursor = 'pointer' })
+      map.current.on('mouseleave', 'baltimore-parcels-fill', () => { map.current.getCanvas().style.cursor = '' })
+
+      // Building click → info popup (footprint area / source year)
+      map.current.on('click', 'baltimore-buildings-fill', (e) => {
+        const feature = e.features?.[0]
+        if (!feature) return
+        new mapLib.current.Popup({ closeButton: true, maxWidth: '240px', className: 'popup-311' })
+          .setLngLat(e.lngLat)
+          .setHTML(createBuildingPopupHtml(feature.properties || {}))
+          .addTo(map.current)
+      })
+      map.current.on('mouseenter', 'baltimore-buildings-fill', () => { map.current.getCanvas().style.cursor = 'pointer' })
+      map.current.on('mouseleave', 'baltimore-buildings-fill', () => { map.current.getCanvas().style.cursor = '' })
+
+      // Vacant building notice click → info popup (address / notice # / date)
+      map.current.on('click', 'baltimore-vacant-notices-points', (e) => {
+        const feature = e.features?.[0]
+        if (!feature) return
+        const coords = feature.geometry.coordinates.slice()
+        while (Math.abs(e.lngLat.lng - coords[0]) > 180) {
+          coords[0] += e.lngLat.lng > coords[0] ? 360 : -360
+        }
+        new mapLib.current.Popup({ closeButton: true, maxWidth: '240px', className: 'popup-311' })
+          .setLngLat(coords)
+          .setHTML(createVacantNoticePopupHtml(feature.properties || {}))
+          .addTo(map.current)
+      })
+      map.current.on('mouseenter', 'baltimore-vacant-notices-points', () => { map.current.getCanvas().style.cursor = 'pointer' })
+      map.current.on('mouseleave', 'baltimore-vacant-notices-points', () => { map.current.getCanvas().style.cursor = '' })
+
+      // Vacant building risk click → risk score + factor breakdown popup (fill + fallback points)
+      const onVacantRiskClick = (e) => {
+        const feature = e.features?.[0]
+        if (!feature) return
+        new mapLib.current.Popup({ closeButton: true, maxWidth: '280px', className: 'popup-311' })
+          .setLngLat(e.lngLat)
+          .setHTML(createVacantRiskPopupHtml(feature.properties || {}))
+          .addTo(map.current)
+      }
+      ;['baltimore-vacant-risk-fill', 'baltimore-vacant-risk-points'].forEach((id) => {
+        map.current.on('click', id, onVacantRiskClick)
         map.current.on('mouseenter', id, () => { map.current.getCanvas().style.cursor = 'pointer' })
         map.current.on('mouseleave', id, () => { map.current.getCanvas().style.cursor = '' })
       })
@@ -892,6 +1257,328 @@ export default function MapView() {
     selectedDate,
     baltimore311Data,
   ])
+
+  // Baltimore ward-precincts — load from local static GeoJSON
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return
+    if (!map.current.getSource('baltimore-ward-precincts')) return
+
+    fetch('/data/baltimore-ward-precincts.geojson')
+      .then((res) => res.json())
+      .then((geojson) => {
+        if (map.current && map.current.getSource('baltimore-ward-precincts')) {
+          setBaltimoreWardPrecinctsData(geojson)
+          map.current.getSource('baltimore-ward-precincts').setData(geojson)
+        }
+      })
+      .catch((err) => {
+        console.warn('Baltimore ward-precincts fetch failed:', err)
+        setBaltimoreWardPrecinctsData({ type: 'FeatureCollection', features: [] })
+      })
+  }, [mapLoaded, setBaltimoreWardPrecinctsData])
+
+  // Baltimore ward-precincts — filter and color-code by 311 density
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return
+    if (!map.current.getLayer('baltimore-ward-precincts-fill')) return
+    if (!baltimoreWardPrecinctsData) return
+
+    if (!baltimoreWardPrecinctsAll) {
+      map.current.setLayoutProperty('baltimore-ward-precincts-fill', 'visibility', 'none')
+      map.current.setLayoutProperty('baltimore-ward-precincts-border', 'visibility', 'none')
+      map.current.setLayoutProperty('baltimore-ward-precincts-labels', 'visibility', 'none')
+      return
+    }
+
+    const enabledTypes = Object.keys(baltimore311Types).filter((t) => baltimore311Types[t])
+    const baltimore311FlatData = map.current.getSource('baltimore-311-flat')?._data
+    let densityMap = {}
+
+    if (enabledTypes.length > 0 && baltimore311FlatData?.features) {
+      const filtered311Data = {
+        type: 'FeatureCollection',
+        features: baltimore311FlatData.features.filter((f) => {
+          const srType = f?.properties?.SRType
+          return srType && enabledTypes.includes(srType)
+        }),
+      }
+      densityMap = calculateBoundary311Density(
+        baltimoreWardPrecinctsData,
+        filtered311Data,
+        baltimore311HideClosed,
+        'VDTST12'
+      )
+    }
+
+    const filteredData = {
+      type: 'FeatureCollection',
+      features: baltimoreWardPrecinctsData.features.filter((f) => {
+        const id = f.properties?.VDTST12
+        return id != null && !baltimoreWardPrecinctHidden[String(id)]
+      }),
+    }
+
+    map.current.getSource('baltimore-ward-precincts').setData(filteredData)
+
+    map.current.setPaintProperty(
+      'baltimore-ward-precincts-fill',
+      'fill-color',
+      getBoundaryColorExpression(densityMap, 'VDTST12')
+    )
+
+    const shouldShow = filteredData.features.length > 0
+    const visibility = shouldShow ? 'visible' : 'none'
+    map.current.setLayoutProperty('baltimore-ward-precincts-fill', 'visibility', visibility)
+    map.current.setLayoutProperty('baltimore-ward-precincts-border', 'visibility', visibility)
+    map.current.setLayoutProperty('baltimore-ward-precincts-labels', 'visibility', visibility)
+  }, [
+    baltimoreWardPrecinctsAll,
+    baltimoreWardPrecinctHidden,
+    baltimoreWardPrecinctsData,
+    mapLoaded,
+    baltimore311Types,
+    baltimore311HideClosed,
+    selectedYear,
+    selectedDate,
+    baltimore311Data,
+  ])
+
+  // Baltimore parcels — load chunks on demand for the enabled neighborhoods/districts/precincts,
+  // merge (deduped by PIN) into the parcels source, and toggle visibility.
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return
+    if (!map.current.getSource('baltimore-parcels')) return
+
+    const setParcelVisibility = (visible) => {
+      const v = visible ? 'visible' : 'none'
+      map.current.setLayoutProperty('baltimore-parcels-fill', 'visibility', v)
+      map.current.setLayoutProperty('baltimore-parcels-outline', 'visibility', v)
+    }
+
+    if (!baltimoreParcelsEnabled) {
+      map.current.getSource('baltimore-parcels').setData({ type: 'FeatureCollection', features: [] })
+      setParcelVisibility(false)
+      return
+    }
+
+    // Build the set of enabled chunk keys across the three groupings.
+    const enabledKeys = []
+    const addEnabled = (kind, record) => {
+      Object.keys(record || {}).forEach((key) => {
+        if (record[key]) enabledKeys.push({ kind, key })
+      })
+    }
+    addEnabled('neighborhood', baltimoreParcelNeighborhoodEnabled)
+    addEnabled('district', baltimoreParcelDistrictEnabled)
+    addEnabled('precinct', baltimoreParcelPrecinctEnabled)
+
+    const reqId = ++parcelLoadReqRef.current
+    const cache = parcelChunkCacheRef.current
+
+    const ensureChunk = (kind, key) =>
+      new Promise((resolve) => {
+        const cacheKey = parcelChunkKey(kind, key)
+        if (cache.has(cacheKey)) {
+          resolve()
+          return
+        }
+        fetch(parcelChunkUrl(kind, key))
+          .then((res) => (res.ok ? res.json() : { features: [] }))
+          .then((geojson) => cache.set(cacheKey, geojson.features || []))
+          .catch(() => cache.set(cacheKey, []))
+          .finally(resolve)
+      })
+
+    Promise.all(enabledKeys.map(({ kind, key }) => ensureChunk(kind, key))).then(() => {
+      // Discard if a newer toggle change superseded this load.
+      if (reqId !== parcelLoadReqRef.current) return
+      if (!map.current || !map.current.getSource('baltimore-parcels')) return
+
+      const seen = new Set()
+      const features = []
+      enabledKeys.forEach(({ kind, key }) => {
+        const chunk = cache.get(parcelChunkKey(kind, key)) || []
+        chunk.forEach((f) => {
+          const pin = f.properties?.PIN
+          if (pin == null || seen.has(pin)) return
+          seen.add(pin)
+          features.push(f)
+        })
+      })
+
+      map.current.getSource('baltimore-parcels').setData({ type: 'FeatureCollection', features })
+      setParcelVisibility(features.length > 0)
+    })
+  }, [
+    mapLoaded,
+    baltimoreParcelsEnabled,
+    baltimoreParcelNeighborhoodEnabled,
+    baltimoreParcelDistrictEnabled,
+    baltimoreParcelPrecinctEnabled,
+  ])
+
+  // Baltimore building footprints — same on-demand chunk pattern as parcels,
+  // merged deduped by GlobalID into the buildings source.
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return
+    if (!map.current.getSource('baltimore-buildings')) return
+
+    const setBuildingVisibility = (visible) => {
+      const v = visible ? 'visible' : 'none'
+      map.current.setLayoutProperty('baltimore-buildings-fill', 'visibility', v)
+      map.current.setLayoutProperty('baltimore-buildings-outline', 'visibility', v)
+    }
+
+    if (!baltimoreBuildingsEnabled) {
+      map.current.getSource('baltimore-buildings').setData({ type: 'FeatureCollection', features: [] })
+      setBuildingVisibility(false)
+      return
+    }
+
+    const enabledKeys = []
+    const addEnabled = (kind, record) => {
+      Object.keys(record || {}).forEach((key) => {
+        if (record[key]) enabledKeys.push({ kind, key })
+      })
+    }
+    addEnabled('neighborhood', baltimoreBuildingNeighborhoodEnabled)
+    addEnabled('district', baltimoreBuildingDistrictEnabled)
+    addEnabled('precinct', baltimoreBuildingPrecinctEnabled)
+
+    const reqId = ++buildingLoadReqRef.current
+    const cache = buildingChunkCacheRef.current
+
+    const ensureChunk = (kind, key) =>
+      new Promise((resolve) => {
+        const cacheKey = parcelChunkKey(kind, key)
+        if (cache.has(cacheKey)) {
+          resolve()
+          return
+        }
+        fetch(buildingChunkUrl(kind, key))
+          .then((res) => (res.ok ? res.json() : { features: [] }))
+          .then((geojson) => cache.set(cacheKey, geojson.features || []))
+          .catch(() => cache.set(cacheKey, []))
+          .finally(resolve)
+      })
+
+    Promise.all(enabledKeys.map(({ kind, key }) => ensureChunk(kind, key))).then(() => {
+      if (reqId !== buildingLoadReqRef.current) return
+      if (!map.current || !map.current.getSource('baltimore-buildings')) return
+
+      const seen = new Set()
+      const features = []
+      enabledKeys.forEach(({ kind, key }) => {
+        const chunk = cache.get(parcelChunkKey(kind, key)) || []
+        chunk.forEach((f) => {
+          const id = f.properties?.GlobalID
+          if (id == null || seen.has(id)) return
+          seen.add(id)
+          features.push(f)
+        })
+      })
+
+      map.current.getSource('baltimore-buildings').setData({ type: 'FeatureCollection', features })
+      setBuildingVisibility(features.length > 0)
+    })
+  }, [
+    mapLoaded,
+    baltimoreBuildingsEnabled,
+    baltimoreBuildingNeighborhoodEnabled,
+    baltimoreBuildingDistrictEnabled,
+    baltimoreBuildingPrecinctEnabled,
+  ])
+
+  // Vacant building notices — load the full point dataset once from a static file.
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return
+    if (!map.current.getSource('baltimore-vacant-notices')) return
+
+    fetch('/data/vacant-building-notices.geojson')
+      .then((res) => res.json())
+      .then((geojson) => {
+        if (map.current && map.current.getSource('baltimore-vacant-notices')) {
+          setBaltimoreVbnData(geojson)
+        }
+      })
+      .catch((err) => {
+        console.warn('Vacant building notices fetch failed:', err)
+        setBaltimoreVbnData({ type: 'FeatureCollection', features: [] })
+      })
+  }, [mapLoaded, setBaltimoreVbnData])
+
+  // Vacant building notices — filter the in-memory dataset by enabled boundaries.
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return
+    if (!map.current.getLayer('baltimore-vacant-notices-points')) return
+    if (!baltimoreVbnData) return
+
+    const setVbnVisibility = (visible) => {
+      map.current.setLayoutProperty('baltimore-vacant-notices-points', 'visibility', visible ? 'visible' : 'none')
+    }
+
+    if (!baltimoreVbnEnabled) {
+      map.current.getSource('baltimore-vacant-notices').setData({ type: 'FeatureCollection', features: [] })
+      setVbnVisibility(false)
+      return
+    }
+
+    const anyEnabled = (record) => Object.values(record || {}).some(Boolean)
+    const features = baltimoreVbnData.features.filter((f) => {
+      const p = f.properties || {}
+      return (
+        baltimoreVbnNeighborhoodEnabled[p.neighborhood] ||
+        baltimoreVbnDistrictEnabled[String(p.district)] ||
+        baltimoreVbnPrecinctEnabled[p.precinct]
+      )
+    })
+
+    // Nothing selected yet (master on but no areas) → show nothing, matching parcels/buildings.
+    const hasSelection =
+      anyEnabled(baltimoreVbnNeighborhoodEnabled) ||
+      anyEnabled(baltimoreVbnDistrictEnabled) ||
+      anyEnabled(baltimoreVbnPrecinctEnabled)
+
+    const out = hasSelection ? features : []
+    map.current.getSource('baltimore-vacant-notices').setData({ type: 'FeatureCollection', features: out })
+    setVbnVisibility(out.length > 0)
+  }, [
+    mapLoaded,
+    baltimoreVbnData,
+    baltimoreVbnEnabled,
+    baltimoreVbnNeighborhoodEnabled,
+    baltimoreVbnDistrictEnabled,
+    baltimoreVbnPrecinctEnabled,
+  ])
+
+  // Use Cases → Public Safety: load the vacant-building risk dataset once.
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return
+    if (!map.current.getSource('baltimore-vacant-risk')) return
+
+    fetch('/data/vacant-risk-buildings.geojson')
+      .then((res) => res.json())
+      .then((geojson) => {
+        if (map.current && map.current.getSource('baltimore-vacant-risk')) {
+          setBaltimoreVacantRiskData(geojson)
+          map.current.getSource('baltimore-vacant-risk').setData(geojson)
+        }
+      })
+      .catch((err) => {
+        console.warn('Vacant risk fetch failed:', err)
+        setBaltimoreVacantRiskData({ type: 'FeatureCollection', features: [] })
+      })
+  }, [mapLoaded, setBaltimoreVacantRiskData])
+
+  // Use Cases → Public Safety: toggle visibility of the risk footprints + fallback points.
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return
+    if (!map.current.getLayer('baltimore-vacant-risk-fill')) return
+    const v = baltimorePublicSafetyEnabled ? 'visible' : 'none'
+    map.current.setLayoutProperty('baltimore-vacant-risk-fill', 'visibility', v)
+    map.current.setLayoutProperty('baltimore-vacant-risk-outline', 'visibility', v)
+    map.current.setLayoutProperty('baltimore-vacant-risk-points', 'visibility', v)
+  }, [mapLoaded, baltimorePublicSafetyEnabled, baltimoreVacantRiskData])
 
   // District Insights — per-district 311 highlights + persistent hover-expand tooltips
   useEffect(() => {
