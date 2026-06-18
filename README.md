@@ -4,9 +4,27 @@ Interactive map application for exploring Baltimore 311 service requests, counci
 
 ## Map basemap
 
-The map uses [MapTiler](https://www.maptiler.com/) for the streets basemap. The API key is included in the app so **no extra setup is required** to view the map after clone and `npm run dev`.
+The map uses [MapTiler](https://www.maptiler.com/) for the basemap. The API key is included in the app so **no extra setup is required** to view the map after clone and `npm run dev`.
 
 > **Note:** The key is visible in the client bundle (normal for browser map apps). Restrict it by HTTP referrer in the [MapTiler dashboard](https://cloud.maptiler.com/) if you deploy to a public URL.
+
+### Changing the basemap
+
+Open the **⋯ settings menu** (top-right) → **Basemap**. You can:
+
+- Pick any built-in MapTiler style (Streets, Dataviz, Satellite, etc.) — applies instantly.
+- Add your own **custom-designed** basemap (see below).
+- Click **Save basemap as default** to persist your choice across reloads (stored in `localStorage` under `baltimore-ic-basemap`).
+
+### Using a custom MapTiler style
+
+1. In [MapTiler Cloud → Customize](https://cloud.maptiler.com/customize/), design a basemap (adjust the colors of roads, water, land, labels, etc.), then **Save & Publish**.
+2. Copy the published style's **`style.json` URL** — it looks like:
+   `https://api.maptiler.com/maps/<your-style-id>/style.json?key=<your-key>`
+3. In the app: **⋯ → Basemap → Add custom style** — paste a name and the `style.json` URL, then click **Add custom style** (it loads immediately and is selected).
+4. Click **Save basemap as default** to keep it.
+
+The URL must match `https://api.maptiler.com/maps/<id>/style.json…` or it is rejected. Custom styles are stored locally per browser; share the URL to reuse a style elsewhere. The built-in style list lives in [`src/config/basemapSettings.js`](src/config/basemapSettings.js) if you want to add styles app-wide.
 
 ## Prerequisites
 

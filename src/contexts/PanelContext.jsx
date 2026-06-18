@@ -3,6 +3,13 @@ import { sendChatMessage } from '../services/openai-chat'
 import { loadSavedUiVisibility, persistUiVisibility } from '../utils/uiVisibilityStorage'
 import { loadUiTheme, persistUiTheme } from '../utils/uiThemeStorage'
 import { isUiThemeAvailable } from '../config/uiThemeSettings'
+import { loadBasemap, persistBasemap } from '../utils/basemapStorage'
+import {
+  DEFAULT_BASEMAP_ID,
+  buildMaptilerStyleUrl,
+  isBuiltInBasemap,
+  isValidCustomStyleUrl,
+} from '../config/basemapSettings'
 import { APP_CITY } from '../constants/region'
 import { saveMapView } from '../utils/mapViewDefaults'
 import {
@@ -35,6 +42,9 @@ export const PanelProvider = ({ children }) => {
 
   // UI theme: silicon (default dark) | baltimore-light
   const [uiTheme, setUiTheme] = useState(loadUiTheme)
+
+  // Basemap selection: { selectedId, customStyles } (see basemapStorage.js)
+  const [basemap, setBasemap] = useState(loadBasemap)
   /** Once true (map session), overlay does not block — reset when map engine changes inside MapView. */
   const [mapBootstrapReady, setMapBootstrapReady] = useState(false)
   const [mapFocusRequest, setMapFocusRequest] = useState(null)
@@ -300,6 +310,47 @@ export const PanelProvider = ({ children }) => {
     persistUiTheme(themeId)
   }
 
+  // Basemap actions
+  const resolveBasemapUrl = (state) => {
+    if (isBuiltInBasemap(state.selectedId)) return buildMaptilerStyleUrl(state.selectedId)
+    const custom = state.customStyles.find((s) => s.id === state.selectedId)
+    return custom ? custom.url : buildMaptilerStyleUrl(DEFAULT_BASEMAP_ID)
+  }
+
+  const selectedBasemapUrl = resolveBasemapUrl(basemap)
+
+  /** Live preview only — does not persist until saveBasemapAsDefault(). */
+  const selectBasemap = (id) => {
+    setBasemap((prev) => {
+      if (prev.selectedId === id) return prev
+      const exists = isBuiltInBasemap(id) || prev.customStyles.some((s) => s.id === id)
+      return exists ? { ...prev, selectedId: id } : prev
+    })
+  }
+
+  /** Add a user-published MapTiler style, select it, and persist immediately. */
+  const addCustomBasemap = ({ label, url }) => {
+    const trimmedLabel = (label || '').trim()
+    const trimmedUrl = (url || '').trim()
+    if (!trimmedLabel || !isValidCustomStyleUrl(trimmedUrl)) return false
+    const id = `custom-${Date.now()}`
+    setBasemap((prev) => {
+      const next = {
+        selectedId: id,
+        customStyles: [...prev.customStyles, { id, label: trimmedLabel, url: trimmedUrl }],
+      }
+      persistBasemap(next)
+      return next
+    })
+    return true
+  }
+
+  const saveBasemapAsDefault = () => {
+    persistBasemap(basemap)
+    addSuccessNotification('Basemap saved as default')
+    return true
+  }
+
   // AI chat actions
   const clearChat = () => setChatMessages([])
 
@@ -357,6 +408,11 @@ export const PanelProvider = ({ children }) => {
     setUiElementVisible,
     uiTheme,
     selectUiTheme,
+    basemap,
+    selectedBasemapUrl,
+    selectBasemap,
+    addCustomBasemap,
+    saveBasemapAsDefault,
     mapBootstrapReady,
     setMapBootstrapReady,
     mapFocusRequest,

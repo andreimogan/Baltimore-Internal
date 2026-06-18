@@ -36,10 +36,6 @@ import {
 import NeighborhoodStatsCard from './NeighborhoodStatsCard'
 import { parcelChunkKey, parcelChunkUrl, buildingChunkUrl } from '../utils/parcelChunks'
 
-const MAPTILER_API_KEY = 'X1kjwlVN29N1UZItdixx'
-
-const MAP_STYLE_URL = `https://api.maptiler.com/maps/streets-v2-dark/style.json?key=${MAPTILER_API_KEY}`
-
 const ZOOM_PERCENT_CONFIG = { minZoom: 8, maxZoom: 18, maxPercent: 200 }
 /** Below this zoom %, neighborhood impact tooltips use existing hide-all behavior (see getTooltipVariant). */
 const TOOLTIP_AUTO_CLOSE_PERCENT = 60
@@ -216,6 +212,7 @@ export default function MapView() {
     baltimore311Data,
     setMapBootstrapReady,
     registerMapCameraReader,
+    selectedBasemapUrl,
   } = usePanelContext()
   const mapContainer = useRef(null)
   const map = useRef(null)
@@ -455,7 +452,7 @@ export default function MapView() {
 
       map.current = new maplibregl.Map({
         container: mapContainer.current,
-        style: MAP_STYLE_URL,
+        style: selectedBasemapUrl,
         center,
         zoom,
         pitch,
@@ -1058,6 +1055,39 @@ export default function MapView() {
     }
   }
 }, [])
+
+  // Switch the basemap style when the selection changes, carrying over the app's
+  // own sources/layers (everything prefixed baltimore-/district-insights) so the
+  // overlays + their feature-state survive setStyle without a re-fetch.
+  const appliedBasemapUrlRef = useRef(selectedBasemapUrl)
+  useEffect(() => {
+    if (!map.current) return
+    if (appliedBasemapUrlRef.current === selectedBasemapUrl) return
+    appliedBasemapUrlRef.current = selectedBasemapUrl
+
+    const isAppId = (id) => id.startsWith('baltimore-') || id.startsWith('district-insights')
+
+    map.current.setStyle(selectedBasemapUrl, {
+      transformStyle: (prev, next) => {
+        if (!prev) return next
+        const sources = { ...next.sources }
+        for (const id of Object.keys(prev.sources)) {
+          if (isAppId(id)) sources[id] = prev.sources[id]
+        }
+        const appLayers = prev.layers.filter((layer) => isAppId(layer.id))
+        const firstSymbolId = next.layers.find((layer) => layer.type === 'symbol')?.id
+        const insertAt = firstSymbolId
+          ? next.layers.findIndex((layer) => layer.id === firstSymbolId)
+          : next.layers.length
+        const layers = [
+          ...next.layers.slice(0, insertAt),
+          ...appLayers,
+          ...next.layers.slice(insertAt),
+        ]
+        return { ...next, sources, layers }
+      },
+    })
+  }, [selectedBasemapUrl])
 
   useEffect(() => {
     if (!mapLoaded) {

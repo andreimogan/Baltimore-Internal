@@ -3,6 +3,7 @@ import { MoreHorizontal } from 'lucide-react'
 import { usePanelContext } from '../contexts/PanelContext'
 import { UI_VISIBILITY_SETTINGS } from '../config/uiVisibilitySettings'
 import { UI_THEME_OPTIONS } from '../config/uiThemeSettings'
+import { BASEMAP_OPTIONS, isValidCustomStyleUrl } from '../config/basemapSettings'
 
 const controlStyle = {
   background: 'var(--ui-nav-control-bg)',
@@ -39,13 +40,51 @@ export default function UiSettingsMenu() {
     toggleUiVisibility,
     uiTheme,
     selectUiTheme,
+    basemap,
+    selectBasemap,
+    addCustomBasemap,
+    saveBasemapAsDefault,
     currentView,
     mapCameraReady,
     saveCurrentMapViewAsDefault,
     saveCurrentMapLayersAsDefault,
   } = usePanelContext()
   const [open, setOpen] = useState(false)
+  const [customLabel, setCustomLabel] = useState('')
+  const [customUrl, setCustomUrl] = useState('')
+  const [customError, setCustomError] = useState('')
   const rootRef = useRef(null)
+
+  const basemapList = [
+    ...BASEMAP_OPTIONS,
+    ...basemap.customStyles.map((style) => ({
+      id: style.id,
+      label: style.label,
+      description: 'Custom MapTiler style',
+    })),
+  ]
+
+  const handleAddCustomBasemap = () => {
+    if (!customLabel.trim()) {
+      setCustomError('Enter a name for the style')
+      return
+    }
+    if (!isValidCustomStyleUrl(customUrl)) {
+      setCustomError('Enter a valid MapTiler style.json URL')
+      return
+    }
+    const added = addCustomBasemap({ label: customLabel, url: customUrl })
+    if (added) {
+      setCustomLabel('')
+      setCustomUrl('')
+      setCustomError('')
+    }
+  }
+
+  const handleSaveBasemap = () => {
+    saveBasemapAsDefault()
+    setOpen(false)
+  }
 
   const canSaveDefaultView = currentView === 'map' && mapCameraReady
   const canSaveDefaultLayers = currentView === 'map'
@@ -111,7 +150,7 @@ export default function UiSettingsMenu() {
         <div
           role="menu"
           aria-label="UI settings"
-          className="absolute right-0 mt-2 w-72 rounded-[8px] border shadow-lg z-[60] overflow-hidden"
+          className="absolute right-0 mt-2 w-72 rounded-[8px] border shadow-lg z-[60] overflow-y-auto max-h-[calc(100vh-5rem)]"
           style={{
             borderColor: 'var(--ui-border)',
             background: 'var(--ui-surface)',
@@ -119,8 +158,12 @@ export default function UiSettingsMenu() {
           }}
         >
           <div
-            className="px-3 py-2 border-b text-xs font-semibold uppercase tracking-wide"
-            style={{ borderColor: 'var(--ui-border-subtle)', color: 'var(--ui-text-muted)' }}
+            className="sticky top-0 z-10 px-3 py-2 border-b text-xs font-semibold uppercase tracking-wide"
+            style={{
+              borderColor: 'var(--ui-border-subtle)',
+              color: 'var(--ui-text-muted)',
+              background: 'var(--ui-surface)',
+            }}
           >
             UI Settings
           </div>
@@ -171,6 +214,106 @@ export default function UiSettingsMenu() {
                 )
               })}
             </ul>
+          </div>
+
+          <div className="py-1 border-b" style={{ borderColor: 'var(--ui-border-subtle)' }}>
+            <div
+              className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide"
+              style={{ color: 'var(--ui-text-muted)' }}
+            >
+              Basemap
+            </div>
+            <ul>
+              {basemapList.map((option) => {
+                const selected = basemap.selectedId === option.id
+
+                return (
+                  <li key={option.id}>
+                    <div
+                      role="menuitemradio"
+                      aria-checked={selected}
+                      className="flex items-start justify-between gap-3 px-3 py-2.5"
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'var(--ui-surface-muted)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent'
+                      }}
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium" style={{ color: 'var(--ui-text-primary)' }}>
+                          {option.label}
+                        </p>
+                        {option.description && (
+                          <p className="text-xs mt-0.5" style={{ color: 'var(--ui-text-muted)' }}>
+                            {option.description}
+                          </p>
+                        )}
+                      </div>
+                      <ToggleSwitch
+                        checked={selected}
+                        label={`Select ${option.label} basemap`}
+                        onChange={() => selectBasemap(option.id)}
+                      />
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+
+            <div className="px-3 pt-1 pb-2 space-y-2">
+              <input
+                type="text"
+                value={customLabel}
+                onChange={(e) => setCustomLabel(e.target.value)}
+                placeholder="Custom style name"
+                className="w-full rounded-[6px] border px-2 py-1.5 text-sm"
+                style={{
+                  borderColor: 'var(--ui-border)',
+                  background: 'var(--ui-nav-control-bg)',
+                  color: 'var(--ui-text-primary)',
+                }}
+              />
+              <input
+                type="text"
+                value={customUrl}
+                onChange={(e) => setCustomUrl(e.target.value)}
+                placeholder="MapTiler style.json URL"
+                className="w-full rounded-[6px] border px-2 py-1.5 text-xs"
+                style={{
+                  borderColor: 'var(--ui-border)',
+                  background: 'var(--ui-nav-control-bg)',
+                  color: 'var(--ui-text-primary)',
+                }}
+              />
+              {customError && (
+                <p className="text-xs" style={{ color: '#dc2626' }}>
+                  {customError}
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={handleAddCustomBasemap}
+                className="w-full rounded-[6px] border px-2 py-1.5 text-sm font-medium transition-colors"
+                style={{ borderColor: 'var(--ui-border)', color: 'var(--ui-text-primary)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--ui-surface-muted)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent'
+                }}
+              >
+                Add custom style
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveBasemap}
+                className="w-full rounded-[6px] px-2 py-1.5 text-sm font-semibold transition-colors"
+                style={{ background: 'var(--ui-accent)', color: '#ffffff' }}
+              >
+                Save basemap as default
+              </button>
+            </div>
           </div>
 
           <div className="py-1 border-b" style={{ borderColor: 'var(--ui-border-subtle)' }}>
